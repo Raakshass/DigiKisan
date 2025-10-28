@@ -1,0 +1,21 @@
+[
+  "maize_common_rust",
+  "maize_blight",
+  "maize_healthy",
+  "maize_gray_leaf_spot",
+  "rice_tungro",
+  "rice_hispa",
+  "rice_downy_mildew",
+  "rice_bacterial_leaf_streak",
+  "rice_bacterial_leaf_blight",
+  "rice_brown_spot",
+  "rice_blast",
+  "rice_healthy",
+  "rice_dead_heart",
+  "rice_bacterial_panicle_blight",
+  "sugarcane_yellow",
+  "sugarcane_mosaic",
+  "sugarcane_healthy",
+  "sugarcane_redrot",
+  "sugarcane_rust"
+]

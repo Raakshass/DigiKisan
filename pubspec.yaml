@@ -1,0 +1,60 @@
+name: maxgush_s_application
+description: A new Flutter project.
+version: 1.0.0+1
+
+environment: 
+  sdk: ^3.6.0
+
+dependencies: 
+  flutter:   # 🚨 CRITICAL: Required for every Flutter project - DO NOT REMOVE
+    sdk: flutter # 🚨 CRITICAL: Required for every Flutter project - DO NOT REMOVE
+  cupertino_icons: ^1.0.2
+  flutter_localizations: 
+    sdk: flutter
+  flutter_svg: ^2.0.12
+  cached_network_image: ^3.4.1
+  shared_preferences: ^2.3.3
+  record: ^6.1.1
+  record_linux: ^1.2.1
+  connectivity_plus: ^6.1.0
+  flutter_sound: ^9.2.13
+  permission_handler: ^11.0.1
+  path_provider: ^2.1.1
+  audioplayers: ^5.2.1
+  http: ^1.2.2      # ✅ SINGLE HTTP PACKAGE: For API calls to backend
+  image_picker: ^1.0.4    
+  flutter_screenutil: ^5.9.0    
+  mime: ^1.0.4            # ✅ ADD: For MIME type detection
+  http_parser: ^4.0.2     # ✅ ADD: For MediaType parsing
+  web: any
+  universal_html: ^2.2.4
+  
+  # ✅ NEW: Voice recording and speech recognition
+  speech_to_text: ^6.6.0
+
+dev_dependencies: 
+  flutter_test:    # 🚨 CRITICAL: Required for Flutter project testing - DO NOT REMOVE
+    sdk: flutter    # 🚨 CRITICAL: Required for Flutter project testing - DO NOT REMOVE
+
+flutter: 
+  uses-material-design: true # 🚨 CRITICAL: Required for Material icon font - DO NOT REMOVE
+  assets: 
+    - assets/
+    - assets/images/
+  fonts: 
+    - family: Inter
+      fonts: 
+        - asset: assets/fonts/InterRegular.ttf
+          weight: 400
+        - asset: assets/fonts/InterBold.ttf
+          weight: 700
+        - asset: assets/fonts/InterSemiBold.ttf
+          weight: 600
+
+  # 🚨 CRITICAL ASSET MANAGEMENT RULES:
+  # - DO NOT ADD NEW ASSET DIRECTORIES (assets/svg/, assets/icons/, etc.)
+  # - ONLY USE EXISTING AND ITEMS AVAILABLE IN THE DIRECTORIES LISTED ABOVE (assets/, assets/images/)
+
+  # 🚨 CRITICAL FONTS RULE:
+  # - DO NOT ADD NEW LOCAL FONTS TO assets/fonts/ 
+  # - ONLY USE EXISTING LOCAL FONTS FROM assets/fonts/
