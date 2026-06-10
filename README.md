@@ -1,35 +1,88 @@
-# 🌾 KisanMitra AI — AI-Powered Agricultural Intelligence Platform
+# KisanMitra AI - Agricultural Intelligence Platform
 
 [![CI](https://github.com/Raakshass/DigiKisan/actions/workflows/ci.yml/badge.svg)](https://github.com/Raakshass/DigiKisan/actions)
 
-**KisanMitra AI** is a production-grade mobile platform that empowers Indian farmers with real-time crop price information, AI-driven disease diagnosis, and multilingual voice-enabled chat — all backed by a RAG-augmented knowledge base with state-specific contingency documents.
+KisanMitra AI is a production-grade mobile platform designed to empower Indian farmers with real-time crop price information, AI-driven disease diagnosis, and multilingual voice-enabled chat. The platform is backed by a RAG-augmented knowledge base that includes state-specific contingency documents and automated data ingestion pipelines.
 
-## 🏗️ Architecture
+## Architecture
 
+```mermaid
+graph TD
+    subgraph Mobile Client [Flutter Mobile App]
+        UI[UI Components]
+        Auth[Firebase Auth]
+        Voice[Sarvam STT/TTS]
+        Cam[Camera / Image Upload]
+        
+        UI --> Auth
+        UI --> Voice
+        UI --> Cam
+    end
+
+    subgraph Backend Services [FastAPI Backend]
+        API[API Router Gateway]
+        Orchestrator[Chat Orchestrator]
+        RAG[RAG Pipeline / ChromaDB]
+        CV[ResNet50 Classifier]
+        Prices[Price Scraper]
+        
+        API --> Orchestrator
+        Orchestrator --> RAG
+        API --> CV
+        API --> Prices
+    end
+
+    subgraph Data Sources [External Integrations]
+        LLM[OpenRouter / Gemini AI]
+        AgMarkNet[AgMarkNet & Data.gov.in]
+        CRIDA[ICAR-CRIDA Contingency DB]
+        Weather[Open-Meteo]
+    end
+
+    subgraph Cloud Infrastructure [Firebase & Render]
+        Firestore[(Firestore Database)]
+        Storage[(Firebase Storage)]
+    end
+
+    Mobile Client -- REST APIs --> API
+    Mobile Client -- ID Token --> API
+    Auth --> Firestore
+    
+    Orchestrator --> LLM
+    Prices --> AgMarkNet
+    Prices --> Firestore
+    
+    RAG --> CRIDA
+    RAG --> Weather
+    
+    CV --> Storage
 ```
-Flutter Mobile App (Dart)
-├── Auth (Login/Register with JWT)
-├── Chat Screen (Composable widgets)
-│   ├── Text chat → RAG-augmented Gemini AI
-│   ├── Voice input → Sarvam STT → English → AI → TTS
-│   ├── Image upload → ResNet50 classifier → AI consultation
-│   └── Price queries → Slot filling → Market data
-└── 11-language support (Hindi, Tamil, Telugu, Bengali, etc.)
 
-FastAPI Backend (Python)
-├── 5 modular routers (chat, disease, auth, health, voice)
-├── ChatOrchestrator (intent → RAG → Gemini → memory)
-├── RAG Pipeline (ChromaDB + MiniLM embeddings)
-│   ├── Static KB (7 agriculture docs, ~15K words)
-│   └── Monthly ingestion (CRIDA contingency, weather, state advisories)
-├── Firebase Integration (Cloud Storage + Firestore)
-├── Async price scraper (4-tier fallback, no Selenium)
-└── ResNet50 crop disease classifier (38 diseases)
-```
+## Features and Integrations
 
-## ⚡ Quick Start
+### 1. Multilingual AI Assistant (RAG)
+The core of KisanMitra is an LLM-powered chatbot orchestrated via OpenRouter. To ensure agricultural accuracy, the AI is augmented with a Retrieval-Augmented Generation (RAG) pipeline utilizing ChromaDB and MiniLM embeddings.
 
-### Backend
+### 2. Automated Data Ingestion (Web Scraping)
+We scrape and ingest data from multiple government and open-source platforms to keep the knowledge base and pricing engine up to date:
+*   **AgMarkNet / Data.gov.in**: Real-time agricultural market prices (mandi prices) across India. We use an asynchronous, 4-tier fallback scraper (no Selenium required).
+*   **ICAR-CRIDA**: State-specific agricultural contingency plans and advisories.
+*   **Open-Meteo**: High-resolution weather forecasting APIs.
+
+### 3. Crop Disease Diagnostics
+Farmers can upload images of diseased crops directly from their mobile cameras. The backend runs a ResNet50 Convolutional Neural Network (PyTorch) fine-tuned on 38 distinct crop disease classes to provide immediate diagnoses and treatment recommendations.
+
+### 4. Voice Processing
+To maintain accessibility for farmers across India, the app integrates **Sarvam AI** for local language voice processing. Farmers can speak in Hindi, Tamil, Telugu, and Bengali, which is processed via Speech-to-Text (STT), passed to the AI engine, and returned via Text-to-Speech (TTS).
+
+### 5. Infrastructure
+*   **Authentication & Database**: Firebase Auth provides secure, client-side authentication. Session management, price caching, and query analytics are persisted in Firebase Firestore.
+*   **Deployment**: The FastAPI backend is containerized via Docker and deployed on Render (Singapore region) for low-latency access.
+
+## Quick Start
+
+### Backend Setup
+
 ```bash
 cd backend
 cp .env.example .env    # Edit with your API keys
@@ -37,85 +90,50 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Flutter App
+### Flutter App Setup
+
 ```bash
 flutter pub get
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
 ```
 
-### Docker
+### Docker Deployment
+
 ```bash
 docker-compose up --build
 ```
 
-## 🔑 Required API Keys
+## Required Environment Variables
 
-| Key | Where to get it | Purpose |
-|-----|----------------|---------|
-| `GEMINI_API_KEY` | [aistudio.google.com](https://aistudio.google.com/app/apikey) | Chatbot AI |
-| `MONGODB_URI` | [mongodb.com/atlas](https://www.mongodb.com/atlas) | User auth, analytics |
-| `SARVAM_API_KEY` | [sarvam.ai](https://dashboard.sarvam.ai) | Voice (STT/TTS/Translate) |
+| Variable | Source | Purpose |
+|----------|---------|---------|
+| `OPENROUTER_API_KEY` | [OpenRouter](https://openrouter.ai/) | Primary LLM gateway |
+| `SARVAM_API_KEY` | [Sarvam AI](https://dashboard.sarvam.ai) | Voice translation (STT/TTS) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Firebase Console | Path to `firebase-sa.json` for Firestore |
 
-## 🧪 Testing
+## Project Structure
 
-```bash
-cd backend && pytest tests/ -v    # 35+ tests
-flutter analyze                    # Dart static analysis
-```
-
-## 📱 Features
-
-- **💬 AI Chat** — RAG-augmented agricultural advisor with location-aware contingency data
-- **🎤 Voice** — Speak in Hindi/Tamil/Telugu → get voice responses back
-- **📸 Disease Detection** — Upload crop photo → ResNet50 classification + AI consultation
-- **💰 Market Prices** — Real-time mandi prices via data.gov.in + AgMarkNet
-- **🔐 Auth** — JWT-based registration and login
-- **📊 Analytics** — Firebase Analytics + Crashlytics
-- **📍 Location-Aware** — State-specific contingency plans from ICAR-CRIDA (5 states)
-- **🔄 Monthly Refresh** — Auto-updated knowledge base via government data sources
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Mobile | Flutter 3.27 + Dart |
-| Backend | FastAPI + Python 3.11 |
-| AI | Google Gemini 1.5 Flash |
-| RAG | LangChain + ChromaDB + sentence-transformers |
-| Data Pipeline | Firebase Cloud Storage + Firestore + APScheduler |
-| Voice | Sarvam AI (11 Indian languages) |
-| Disease | ResNet50 (PyTorch, 38 classes) |
-| Database | MongoDB (Motor async driver) |
-| Auth | JWT + bcrypt |
-| CI/CD | GitHub Actions |
-
-## 📂 Project Structure
-
-```
+```text
 kisanmitra-ai/
-├── lib/                          # Flutter app
-│   ├── main.dart                 # Firebase init + auth check
-│   ├── presentation/             # Screens + widgets
-│   ├── services/                 # API, Auth, Image, Translation, Analytics
-│   └── core/                     # Theme, routes, utils
-├── backend/                      # FastAPI backend
+├── lib/                          # Flutter application
+│   ├── main.dart                 # Firebase initialization
+│   ├── presentation/             # UI screens and widgets
+│   ├── services/                 # API, Auth, and Analytics clients
+│   └── core/                     # Theming and routing
+├── backend/                      # FastAPI Python backend
 │   ├── app/
-│   │   ├── api/routers/          # 5 modular route files
-│   │   ├── services/
-│   │   │   ├── data_ingestion/   # Monthly RAG data pipeline
-│   │   │   │   ├── base_source.py
-│   │   │   │   ├── crida_scraper.py
-│   │   │   │   └── firebase_store.py
-│   │   │   └── ...               # Business logic
-│   │   └── core/                 # Config, DB, state mappings
-│   ├── knowledge_base/           # 7+ agriculture docs for RAG
-│   ├── tests/                    # 35+ pytest tests
-│   └── requirements.txt
-├── .github/workflows/ci.yml      # CI pipeline
-├── Dockerfile + docker-compose   # Container deployment
-└── railway.toml                  # Railway one-click deploy
+│   │   ├── api/routers/          # Modular API endpoints
+│   │   ├── services/             # Business logic (RAG, CV, Scraper)
+│   │   │   └── data_ingestion/   # Integration with CRIDA and Open-Meteo
+│   │   └── core/                 # App configuration
+│   ├── knowledge_base/           # Static agriculture documents for RAG
+│   ├── tests/                    # Pytest suite
+│   ├── Dockerfile                # Container definition
+│   └── requirements.txt          # Python dependencies
+├── render.yaml                   # Render deployment configuration
+└── .github/workflows/ci.yml      # CI/CD pipeline definition
 ```
 
-## 📄 License
+## License
 
-MIT
+MIT License
