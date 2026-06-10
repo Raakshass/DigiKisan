@@ -11,7 +11,6 @@ from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, Body
 
-from app.services.interactivechat import TextClassifierInference
 from app.services.database_service import get_firestore
 from app.api.deps import get_text_clf
 
@@ -26,7 +25,7 @@ async def health():
 @router.post("/classify")
 async def classify_text(
     payload: Dict[str, Any] = Body(...),
-    clf: TextClassifierInference = Depends(get_text_clf),
+    clf: Any = Depends(get_text_clf),
 ):
     """Classify text as price_enquiry or non_price_enquiry."""
     text = payload.get("text", "")

@@ -15,7 +15,6 @@ from fastapi import APIRouter, Depends, Body, Request, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
-from app.services.interactivechat import TextClassifierInference, SlotFiller
 from app.services.database_service import SessionService, PriceDataService, AnalyticsService
 from app.models.price_data import QueryAnalyticsModel, UserSessionModel
 from app.services.price_scraper import (
@@ -97,8 +96,8 @@ async def start_chat_session(
 @router.post("/message")
 async def chat_message(
     payload: Dict[str, Any] = Body(...),
-    clf: TextClassifierInference = Depends(get_text_clf),
-    slot_filler: SlotFiller = Depends(get_slot_filler),
+    clf: Any = Depends(get_text_clf),
+    slot_filler: Any = Depends(get_slot_filler),
     session_service: Optional[SessionService] = Depends(get_session_service),
     gemini_chat: GeminiChat = Depends(get_gemini_chat),
     price_service: Optional[PriceDataService] = Depends(get_price_service),
@@ -182,8 +181,8 @@ async def chat_message(
 async def send_chat_message(
     chat_request: ChatMessage,
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    clf: TextClassifierInference = Depends(get_text_clf),
-    slot_filler: SlotFiller = Depends(get_slot_filler),
+    clf: Any = Depends(get_text_clf),
+    slot_filler: Any = Depends(get_slot_filler),
     gemini_chat: GeminiChat = Depends(get_gemini_chat),
     price_service: Optional[PriceDataService] = Depends(get_price_service),
 ):
@@ -271,8 +270,8 @@ async def send_chat_message(
 @router.post("/slots")
 async def chat_slots(
     payload: Dict[str, Any] = Body(...),
-    clf: TextClassifierInference = Depends(get_text_clf),
-    slot_filler: SlotFiller = Depends(get_slot_filler),
+    clf: Any = Depends(get_text_clf),
+    slot_filler: Any = Depends(get_slot_filler),
 ):
     """Legacy slot-based chat endpoint for backward compatibility."""
     message = payload.get("message", "")

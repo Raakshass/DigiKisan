@@ -13,8 +13,6 @@ from datetime import datetime
 from fastapi import Depends
 
 from app.core.config import settings
-from app.services.interactivechat import TextClassifierInference, SlotFiller
-from app.services.image_classifier import CropDiseaseClassifier
 from app.services.database_service import PriceDataService, AnalyticsService, SessionService
 # ---------------------------------------------------------------------------
 # OpenRouterChat — Vendor-unlocked LLM via OpenRouter (OpenAI-compatible API)
@@ -170,21 +168,23 @@ _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 class ModelSingleton:
     """Lazy-loaded model instances. Thread-safe via GIL for single-worker uvicorn."""
 
-    _text_clf: Optional[TextClassifierInference] = None
-    _slot_filler: Optional[SlotFiller] = None
-    _img_clf: Optional[CropDiseaseClassifier] = None
+    _text_clf: Optional[Any] = None
+    _slot_filler: Optional[Any] = None
+    _img_clf: Optional[Any] = None
     _llm_chat: Optional[OpenRouterChat] = None
 
     @classmethod
-    def get_text_clf(cls) -> TextClassifierInference:
+    def get_text_clf(cls) -> Any:
         if cls._text_clf is None:
+            from app.services.interactivechat import TextClassifierInference
             model_dir = os.path.join(_BACKEND_DIR, settings.text_classifier_dir)
             cls._text_clf = TextClassifierInference(model_dir=model_dir)
         return cls._text_clf
 
     @classmethod
-    def get_slot_filler(cls) -> SlotFiller:
+    def get_slot_filler(cls) -> Any:
         if cls._slot_filler is None:
+            from app.services.interactivechat import SlotFiller
             commodity_file = os.path.join(_BACKEND_DIR, settings.commodity_mappings_csv)
             district_file = os.path.join(_BACKEND_DIR, settings.district_mappings_csv)
             cls._slot_filler = SlotFiller(
@@ -194,8 +194,9 @@ class ModelSingleton:
         return cls._slot_filler
 
     @classmethod
-    def get_img_clf(cls) -> CropDiseaseClassifier:
+    def get_img_clf(cls) -> Any:
         if cls._img_clf is None:
+            from app.services.image_classifier import CropDiseaseClassifier
             checkpoint = os.path.join(_BACKEND_DIR, settings.image_classifier_checkpoint)
             classes = os.path.join(_BACKEND_DIR, settings.image_classifier_classes)
             cls._img_clf = CropDiseaseClassifier(
@@ -222,13 +223,13 @@ class ModelSingleton:
 # ---------------------------------------------------------------------------
 # FastAPI dependency functions
 # ---------------------------------------------------------------------------
-def get_text_clf() -> TextClassifierInference:
+def get_text_clf() -> Any:
     return ModelSingleton.get_text_clf()
 
-def get_slot_filler() -> SlotFiller:
+def get_slot_filler() -> Any:
     return ModelSingleton.get_slot_filler()
 
-def get_img_clf() -> CropDiseaseClassifier:
+def get_img_clf() -> Any:
     return ModelSingleton.get_img_clf()
 
 def get_llm_chat() -> OpenRouterChat:

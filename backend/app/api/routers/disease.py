@@ -12,7 +12,6 @@ from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, Body, UploadFile, File
 
-from app.services.image_classifier import CropDiseaseClassifier
 from app.api.deps import GeminiChat, get_img_clf, get_gemini_chat
 
 router = APIRouter(prefix="/disease", tags=["Disease Detection"])
@@ -21,7 +20,7 @@ router = APIRouter(prefix="/disease", tags=["Disease Detection"])
 @router.post("/predict")
 async def disease_predict(
     file: UploadFile = File(...),
-    img_clf: CropDiseaseClassifier = Depends(get_img_clf),
+    img_clf: Any = Depends(get_img_clf),
     gemini_chat: GeminiChat = Depends(get_gemini_chat),
 ):
     """Upload a crop image for disease detection. Returns prediction + AI summary."""

@@ -55,7 +55,8 @@ async def lifespan(app: FastAPI):
             print(f"⚠️ RAG init error (non-fatal): {e}")
 
     rag_thread = threading.Thread(target=_init_rag, daemon=True)
-    rag_thread.start()
+    # Disabled for Render 512MB Free Tier — let it lazy-load on first request
+    # rag_thread.start()
 
     # Start monthly data ingestion scheduler
     try:
