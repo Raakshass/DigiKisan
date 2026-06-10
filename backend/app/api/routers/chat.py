@@ -13,12 +13,10 @@ from typing import Dict, Any, Optional
 
 from fastapi import APIRouter, Depends, Body, Request, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
 from pydantic import BaseModel
 
 from app.services.interactivechat import TextClassifierInference, SlotFiller
 from app.services.database_service import SessionService, PriceDataService, AnalyticsService
-from app.services.auth_service import AuthService, SECRET_KEY, ALGORITHM
 from app.models.price_data import QueryAnalyticsModel, UserSessionModel
 from app.services.price_scraper import (
     get_market_prices, summarize_prices, format_price_response,
@@ -212,15 +210,15 @@ async def send_chat_message(
 
                 if result.get("ask"):
                     _user_sessions[user_id] = result.get("session_state", {})
-                    return _auth_response(result["ask"], user, "price_enquiry")
+                    return _auth_response(result["ask"], user_info, "price_enquiry")
 
                 if result.get("slots"):
                     slots = result["slots"]
                     response_text = await _fetch_and_format_prices(slots, price_service)
                     _user_sessions[user_id] = {}
-                    return _auth_response(response_text, user, "price_enquiry")
+                    return _auth_response(response_text, user_info, "price_enquiry")
 
-                return _auth_response("Please tell me which crop price you'd like to know about.", user, "price_enquiry")
+                return _auth_response("Please tell me which crop price you'd like to know about.", user_info, "price_enquiry")
 
             else:
                 # New query — classify intent
@@ -233,15 +231,15 @@ async def send_chat_message(
 
                     if result.get("ask"):
                         _user_sessions[user_id] = result.get("session_state", {})
-                        return _auth_response(result["ask"], user, "price_enquiry")
+                        return _auth_response(result["ask"], user_info, "price_enquiry")
                     if result.get("slots"):
                         slots = result["slots"]
                         response_text = await _fetch_and_format_prices(slots, price_service)
                         _user_sessions[user_id] = {}
-                        return _auth_response(response_text, user, "price_enquiry")
+                        return _auth_response(response_text, user_info, "price_enquiry")
 
                     _user_sessions[user_id] = session_state
-                    return _auth_response("Please tell me which crop price you'd like to know about.", user, "price_enquiry")
+                    return _auth_response("Please tell me which crop price you'd like to know about.", user_info, "price_enquiry")
                 else:
                     # General agricultural query → RAG-augmented ChatOrchestrator
                     orchestrator = get_orchestrator(gemini_chat)
@@ -250,21 +248,16 @@ async def send_chat_message(
                         session_id=user_id,
                     )
                     response_text = orch_result.get("response", "Sorry, I couldn't process that.")
-                    return _auth_response(response_text, user, orch_result.get("intent", "general"))
-
-            # Update query count
-            await auth_service.update_user_queries(user.username)
+                    return _auth_response(response_text, user_info, orch_result.get("intent", "general"))
 
         except Exception as ai_error:
             print(f"AI processing error: {ai_error}")
             _user_sessions.pop(user_id, None)
             return _auth_response(
                 "I'm here to help with your farming needs! Ask about crop prices, diseases, or farming advice.",
-                user, "general",
+                user_info, "general",
             )
 
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
     except HTTPException:
         raise
     except Exception as e:
@@ -447,11 +440,11 @@ def _chat_response(
     return resp
 
 
-def _auth_response(response_text: str, user, intent: str) -> Dict[str, Any]:
+def _auth_response(response_text: str, user_info: Dict[str, Any], intent: str) -> Dict[str, Any]:
     """Build authenticated chat response."""
     return {
         "response": response_text,
-        "user_id": user.user_id,
-        "username": user.username,
+        "user_id": user_info.get("uid"),
+        "email": user_info.get("email"),
         "intent": intent,
     }
