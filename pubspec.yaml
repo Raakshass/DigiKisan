@@ -1,5 +1,5 @@
-name: maxgush_s_application
-description: A new Flutter project.
+name: digikisan
+description: AI-Powered Agricultural Assistant for Indian Farmers — real-time market prices, crop disease detection, and multilingual voice chat.
 version: 1.0.0+1
 
 environment: 
@@ -30,7 +30,14 @@ dependencies:
   universal_html: ^2.2.4
   
   # ✅ NEW: Voice recording and speech recognition
-  speech_to_text: ^6.6.0
+  speech_to_text: ^7.0.0
+
+  # ✅ NEW: Firebase (Analytics + Crashlytics + Push)
+  firebase_core: ^3.12.1
+  firebase_auth: ^5.5.1
+  firebase_analytics: ^11.4.4
+  firebase_crashlytics: ^4.3.3
+  firebase_messaging: ^15.2.4
 
 dev_dependencies: 
   flutter_test:    # 🚨 CRITICAL: Required for Flutter project testing - DO NOT REMOVE

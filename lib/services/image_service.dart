@@ -6,10 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
+import 'api_service.dart';
 
 class ImageService {
   static final ImagePicker _picker = ImagePicker();
-  static const String baseUrl = 'http://10.61.89.244:8000/api';
+  static String get baseUrl => ApiService.baseUrl;
 
   // ✅ FIXED: Platform-agnostic image picker
   static Future<XFile?> pickImage({required bool fromCamera}) async {

@@ -2,8 +2,78 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApiService {
-  // Your backend URL - change this when you deploy to production
-  static const String baseUrl = 'http://10.61.89.244:8000/api';
+  // Backend URL — configurable via environment, defaults to localhost for development.
+  // For Android emulator use 10.0.2.2, for physical device use your machine's LAN IP.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8000/api', // Android emulator default
+  );
+
+  /// Start a new chat session. Returns {ok, session_id, message}.
+  static Future<Map<String, dynamic>> startChatSession() async {
+    final url = Uri.parse('$baseUrl/chat/start-session');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({}),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        return {'ok': false, 'error': 'Failed to create session: ${response.statusCode}'};
+      }
+    } catch (e) {
+      return {'ok': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  /// Send a message to the RAG-augmented chat endpoint.
+  /// [location] is optional: {'state': 'UP', 'district': 'Lucknow'}
+  /// [language] is optional: e.g. 'en', 'hi', 'bn'
+  static Future<Map<String, dynamic>> sendChatMessage(
+    String message, {
+    String? sessionId,
+    Map<String, dynamic>? sessionState,
+    Map<String, String>? location,
+    String? language,
+  }) async {
+    final url = Uri.parse('$baseUrl/chat/message');
+
+    try {
+      final payload = <String, dynamic>{
+        'message': message,
+        'session_id': sessionId,
+        'session_state': sessionState ?? {},
+      };
+
+      // Attach location for region-specific RAG results
+      if (location != null && location.isNotEmpty) {
+        payload['location'] = location;
+      }
+
+      // Attach language preference
+      if (language != null && language.isNotEmpty) {
+        payload['language'] = language;
+      }
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(payload),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Chat error: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
 
   // Classify text as price_enquiry or non_price_enquiry
   static Future<Map<String, dynamic>> classifyText(String text) async {

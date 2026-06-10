@@ -1,0 +1,29 @@
+# KisanMitra AI Backend — Docker Build Ignore
+# Prevents secrets and dev artifacts from leaking into the Docker image
+
+# Secrets (mounted as volumes instead)
+firebase-sa.json
+*.json.json
+.env
+
+# Dev artifacts
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+chroma_db/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Tests (not needed in production image)
+tests/
+
+# Documentation
+*.md

@@ -1,12 +1,38 @@
+import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'core/app_export.dart';
 import 'routes/app_routes.dart';
 import 'services/auth_service.dart';
+import 'services/analytics_service.dart';
 import 'presentation/chat_screen/chat_screen.dart';
 import 'presentation/auth_screen/login_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase (catches errors gracefully if google-services.json missing)
+  try {
+    await Firebase.initializeApp();
+
+    // Route Flutter errors to Crashlytics
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+    // Catch async errors
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+
+    print('✅ Firebase initialized');
+  } catch (e) {
+    print('⚠️ Firebase not configured yet: $e');
+    print('   Run: flutterfire configure --project=YOUR_PROJECT_ID');
+  }
+
   runApp(const MyApp());
 }
 
@@ -16,18 +42,21 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(393, 852), // ✅ Your Figma design size
-      minTextAdapt: true,              // ✅ Adapt text size automatically
-      splitScreenMode: true,           // ✅ Fix for splitScreenMode error
+      designSize: const Size(393, 852),
+      minTextAdapt: true,
+      splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp(
-          title: 'DigiKisan',
+          title: 'KisanMitra AI',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             primarySwatch: Colors.green,
             visualDensity: VisualDensity.adaptivePlatformDensity,
           ),
-          home: AuthChecker(), // ✅ Check authentication first
+          navigatorObservers: [
+            AnalyticsService.observer,
+          ],
+          home: AuthChecker(),
           routes: AppRoutes.routes,
         );
       },
@@ -35,7 +64,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Widget to check if user is already logged in
+/// Splash screen that checks auth state and routes accordingly.
 class AuthChecker extends StatefulWidget {
   @override
   _AuthCheckerState createState() => _AuthCheckerState();
@@ -49,21 +78,21 @@ class _AuthCheckerState extends State<AuthChecker> {
   }
 
   Future<void> _checkAuth() async {
-    // Check if user is already logged in
-    bool isLoggedIn = await AuthService.loadAuthData();
-    
-    // Wait a moment to show splash
-    await Future.delayed(Duration(seconds: 1));
-    
+    // Load persisted location data
+    await AuthService.loadAuthData();
+
+    // Show splash briefly
+    await Future.delayed(const Duration(seconds: 1));
+
     if (mounted) {
-      if (isLoggedIn) {
-        // User is logged in, go to chat
+      if (AuthService.isLoggedIn) {
+        AnalyticsService.logScreenView('chat_screen');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => ChatScreen()),
         );
       } else {
-        // User not logged in, go to login
+        AnalyticsService.logScreenView('login_screen');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => LoginScreen()),
@@ -74,7 +103,6 @@ class _AuthCheckerState extends State<AuthChecker> {
 
   @override
   Widget build(BuildContext context) {
-    // Show splash screen while checking
     return Scaffold(
       backgroundColor: Colors.green[50],
       body: Center(
@@ -82,22 +110,22 @@ class _AuthCheckerState extends State<AuthChecker> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              '🌾 DigiKisan',
+              '🌾 KisanMitra AI',
               style: TextStyle(
-                fontSize: 36, // ✅ Fixed: Removed .sp
+                fontSize: 36,
                 fontWeight: FontWeight.bold,
                 color: Colors.green[800],
               ),
             ),
-            SizedBox(height: 16), // ✅ Fixed: Removed .h
+            const SizedBox(height: 16),
             Text(
               'Agricultural Intelligence Platform',
               style: TextStyle(
-                fontSize: 18, // ✅ Fixed: Removed .sp
+                fontSize: 18,
                 color: Colors.green[600],
               ),
             ),
-            SizedBox(height: 40), // ✅ Fixed: Removed .h
+            const SizedBox(height: 40),
             CircularProgressIndicator(
               color: Colors.green[700],
             ),

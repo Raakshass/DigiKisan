@@ -1,11 +1,16 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:typed_data';
+import 'api_service.dart';
 
 class TranslationService {
-  static const String _sarvamApiKey = 'sk_zu71selw_ghFgnzeDYI3RNhHDEibC4qqW'; // ✅ Your Sarvam API key
-  static const String _sarvamBaseUrl = 'https://api.sarvam.ai'; // ✅ Direct to Sarvam
-  static const String _backendBaseUrl = 'http://10.61.89.244:8000/api'; // ✅ Your backend
+  // API key loaded from compile-time env (flutter run --dart-define=SARVAM_API_KEY=...)
+  static const String _sarvamApiKey = String.fromEnvironment(
+    'SARVAM_API_KEY',
+    defaultValue: '',  // Will gracefully fail if not set
+  );
+  static const String _sarvamBaseUrl = 'https://api.sarvam.ai';
+  static String get _backendBaseUrl => ApiService.baseUrl;
   
   // ✅ Official Sarvam language codes
   static const Map<String, String> supportedLanguages = {

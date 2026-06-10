@@ -1,296 +1,121 @@
-# 🌾 DigiKisan - AI-Powered Agricultural Assistant
+# 🌾 KisanMitra AI — AI-Powered Agricultural Intelligence Platform
 
-<div align="center">
+[![CI](https://github.com/Raakshass/DigiKisan/actions/workflows/ci.yml/badge.svg)](https://github.com/Raakshass/DigiKisan/actions)
 
-![DigiKisan Logo](assets/images/img_logo.png)
-
-**Empowering Indian Farmers with AI-Driven Agricultural Insights**
-
-[![Flutter](https://img.shields.io/badge/Flutter-3.0+-02569B?logo=flutter)](https://flutter.dev)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi)](https://fastapi.tiangolo.com)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-[Features](#-features) • [Architecture](#-architecture) • [Installation](#-installation) • [Usage](#-usage) • [API Documentation](#-api-endpoints)
-
-</div>
-
----
-
-## 📖 About
-
-DigiKisan is a comprehensive agricultural chatbot application designed specifically for Indian farmers. It combines a Flutter mobile frontend with a powerful FastAPI backend to provide real-time market prices, crop disease detection, and intelligent voice-based assistance in multiple Indian languages.
-
-### 🎯 Key Highlights
-
-- **Multi-lingual Voice Support**: Interact with the chatbot in multiple Indian languages using Sarvam AI.
-- **Real-time Market Prices**: Get up-to-date agricultural commodity prices from AGMARKNET.
-- **Crop Disease Detection**: AI-powered image classification using ResNet50 for plant disease identification.
-- **Location-based Insights**: Personalized recommendations based on the farmer's location.
-- **Offline Support**: Core features available without internet connectivity.
-
----
-
-## ✨ Features
-
-### 🎤 Voice-Enabled Chat
-- Natural language processing for farmer queries.
-- Speech-to-text and text-to-speech in regional languages.
-- Context-aware conversation management.
-
-### 💰 Market Price Intelligence
-- Real-time commodity price tracking across Indian markets.
-- Historical price trends and analysis.
-- Location-specific market information.
-- Price alerts and notifications.
-
-### 🌿 Crop Disease Detection
-- Image-based plant disease identification.
-- Deep learning model with high accuracy.
-- Treatment recommendations and preventive measures.
-- Support for 10+ major crops.
-
-### 🗺️ Location Services
-- District-wise agricultural data.
-- Weather information integration.
-- Localized crop recommendations.
-
----
+**KisanMitra AI** is a production-grade mobile platform that empowers Indian farmers with real-time crop price information, AI-driven disease diagnosis, and multilingual voice-enabled chat — all backed by a RAG-augmented knowledge base with state-specific contingency documents.
 
 ## 🏗️ Architecture
 
-### Technology Stack
-
-#### **Frontend**
-- **Flutter**: Cross-platform mobile framework
-- **Dart**: Primary programming language
-- **Material Design**: UI components
-
-#### **Backend**
-- **FastAPI**: High-performance Python web framework
-- **MongoDB**: NoSQL database for user and price data
-- **PyTorch**: Deep learning framework for ML models
-- **Sarvam AI**: Voice processing and translation
-
-#### **Machine Learning**
-- **Image Classifier**: ResNet50-based CNN for disease detection
-- **Text Classifier**: Intent classification for user queries
-- **Slot Filler**: Entity extraction from farmer conversations
-
-### System Architecture
 ```
-┌─────────────────┐
-│  Flutter App    │
-│  (Mobile UI)    │
-└────────┬────────┘
-         │
-         ↓
-┌─────────────────┐
-│  FastAPI Server │
-│  (API Gateway)  │
-└────────┬────────┘
-         │
-    ┌────┴────┐
-    ↓         ↓
-┌────────┐ ┌──────────┐
-│MongoDB │ │ML Models │
-│Database│ │(PyTorch) │
-└────────┘ └──────────┘
+Flutter Mobile App (Dart)
+├── Auth (Login/Register with JWT)
+├── Chat Screen (Composable widgets)
+│   ├── Text chat → RAG-augmented Gemini AI
+│   ├── Voice input → Sarvam STT → English → AI → TTS
+│   ├── Image upload → ResNet50 classifier → AI consultation
+│   └── Price queries → Slot filling → Market data
+└── 11-language support (Hindi, Tamil, Telugu, Bengali, etc.)
+
+FastAPI Backend (Python)
+├── 5 modular routers (chat, disease, auth, health, voice)
+├── ChatOrchestrator (intent → RAG → Gemini → memory)
+├── RAG Pipeline (ChromaDB + MiniLM embeddings)
+│   ├── Static KB (7 agriculture docs, ~15K words)
+│   └── Monthly ingestion (CRIDA contingency, weather, state advisories)
+├── Firebase Integration (Cloud Storage + Firestore)
+├── Async price scraper (4-tier fallback, no Selenium)
+└── ResNet50 crop disease classifier (38 diseases)
 ```
 
----
+## ⚡ Quick Start
 
-## 🚀 Installation
-
-### Prerequisites
-
-- Flutter SDK (v3.0+)
-- Python (v3.11+)
-- MongoDB (v6.0+)
-- Git LFS (for model files)
-
-### Frontend Setup
-
-
-# Clone the repository
-git clone https://github.com/Raakshass/DigiKisan.git
-cd DigiKisan
-
-# Install Flutter dependencies
-flutter pub get
-
-# Run the app
-flutter run
-
-Backend Setup
-# Navigate to backend directory
+### Backend
+```bash
 cd backend
-
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
+cp .env.example .env    # Edit with your API keys
 pip install -r requirements.txt
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your configuration
-
-# Download ML models (if not using Git LFS)
-python download_models.py
-
-# Run the server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-Environment Configuration
-
-Create a .env file in the backend/ directory:
-
-MONGODB_URI=mongodb://localhost:27017
-DATABASE_NAME=digikisan
-SECRET_KEY=your-secret-key-here
-SARVAM_API_KEY=your-sarvam-api-key
-AGMARKNET_API_KEY=your-agmarknet-key
-
-📱 Usage
-For Farmers
-
-Register/Login: Create an account or log in
-
-Select Language: Choose your preferred language
-
-Ask Questions: Use voice or text to ask about:
-
-Market prices
-
-Crop diseases
-
-Weather updates
-
-Agricultural practices
-
-Take Photos: Snap pictures of crops for disease detection
-
-View Results: Get instant AI-powered insights
-
-For Developers
-API Endpoints
-
-Authentication
-
-POST /api/auth/register - Register new user
-POST /api/auth/login - User login
-
-
-Chat
-
-POST /api/chat/text - Text-based query
-POST /api/chat/voice - Voice-based query
-
-
-Price Data
-
-GET /api/prices/commodity/{name} - Get commodity prices
-GET /api/prices/location/{district} - Location-based prices
-
-
-Image Classification
-
-POST /api/classify/image - Crop disease detection
-
-🧠 Machine Learning Models
-Image Classifier
-
-Architecture: ResNet50 (Transfer Learning)
-
-Dataset: Custom agricultural disease dataset
-
-Accuracy: 94.2% on test set
-
-Classes: 10+ crop diseases
-
-Size: 281 MB (stored via Git LFS)
-
-Text Classifier
-
-Model: Custom LSTM-based intent classifier
-
-Features: Query intent detection (price, disease, weather, general)
-
-Languages: Hindi, English, and regional languages
-
-📊 Project Structure
+uvicorn app.main:app --reload --port 8000
 ```
-DigiKisan/
-├── lib/                      # Flutter app source
-│   ├── core/                 # Core utilities
-│   ├── presentation/         # UI screens
-│   ├── services/             # API services
-│   ├── widgets/              # Reusable widgets
-│   └── main.dart             # App entry point
-├── backend/                  # FastAPI backend
+
+### Flutter App
+```bash
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
+```
+
+### Docker
+```bash
+docker-compose up --build
+```
+
+## 🔑 Required API Keys
+
+| Key | Where to get it | Purpose |
+|-----|----------------|---------|
+| `GEMINI_API_KEY` | [aistudio.google.com](https://aistudio.google.com/app/apikey) | Chatbot AI |
+| `MONGODB_URI` | [mongodb.com/atlas](https://www.mongodb.com/atlas) | User auth, analytics |
+| `SARVAM_API_KEY` | [sarvam.ai](https://dashboard.sarvam.ai) | Voice (STT/TTS/Translate) |
+
+## 🧪 Testing
+
+```bash
+cd backend && pytest tests/ -v    # 35+ tests
+flutter analyze                    # Dart static analysis
+```
+
+## 📱 Features
+
+- **💬 AI Chat** — RAG-augmented agricultural advisor with location-aware contingency data
+- **🎤 Voice** — Speak in Hindi/Tamil/Telugu → get voice responses back
+- **📸 Disease Detection** — Upload crop photo → ResNet50 classification + AI consultation
+- **💰 Market Prices** — Real-time mandi prices via data.gov.in + AgMarkNet
+- **🔐 Auth** — JWT-based registration and login
+- **📊 Analytics** — Firebase Analytics + Crashlytics
+- **📍 Location-Aware** — State-specific contingency plans from ICAR-CRIDA (5 states)
+- **🔄 Monthly Refresh** — Auto-updated knowledge base via government data sources
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Mobile | Flutter 3.27 + Dart |
+| Backend | FastAPI + Python 3.11 |
+| AI | Google Gemini 1.5 Flash |
+| RAG | LangChain + ChromaDB + sentence-transformers |
+| Data Pipeline | Firebase Cloud Storage + Firestore + APScheduler |
+| Voice | Sarvam AI (11 Indian languages) |
+| Disease | ResNet50 (PyTorch, 38 classes) |
+| Database | MongoDB (Motor async driver) |
+| Auth | JWT + bcrypt |
+| CI/CD | GitHub Actions |
+
+## 📂 Project Structure
+
+```
+kisanmitra-ai/
+├── lib/                          # Flutter app
+│   ├── main.dart                 # Firebase init + auth check
+│   ├── presentation/             # Screens + widgets
+│   ├── services/                 # API, Auth, Image, Translation, Analytics
+│   └── core/                     # Theme, routes, utils
+├── backend/                      # FastAPI backend
 │   ├── app/
-│   │   ├── api/              # API routes
-│   │   ├── core/             # Config & database
-│   │   ├── models/           # Data models
-│   │   └── services/         # Business logic
-│   ├── models/               # ML model files
-│   └── requirements.txt      # Python dependencies
-├── assets/                   # Images, fonts, icons
-├── android/                  # Android native code
-├── ios/                      # iOS native code
-└── README.md                 # This file
+│   │   ├── api/routers/          # 5 modular route files
+│   │   ├── services/
+│   │   │   ├── data_ingestion/   # Monthly RAG data pipeline
+│   │   │   │   ├── base_source.py
+│   │   │   │   ├── crida_scraper.py
+│   │   │   │   └── firebase_store.py
+│   │   │   └── ...               # Business logic
+│   │   └── core/                 # Config, DB, state mappings
+│   ├── knowledge_base/           # 7+ agriculture docs for RAG
+│   ├── tests/                    # 35+ pytest tests
+│   └── requirements.txt
+├── .github/workflows/ci.yml      # CI pipeline
+├── Dockerfile + docker-compose   # Container deployment
+└── railway.toml                  # Railway one-click deploy
 ```
-🤝 Contributing
 
-Contributions are welcome! Please follow these steps:
+## 📄 License
 
-Fork the repository
-
-Create a feature branch (git checkout -b feature/AmazingFeature)
-
-Commit your changes (git commit -m 'Add some AmazingFeature')
-
-Push to the branch (git push origin feature/AmazingFeature)
-
-Open a Pull Request
-
-📄 License
-
-This project is licensed under the MIT License - see the LICENSE
- file for details.
-
-👥 Team
-
-Developer: Raakshass
-
-🙏 Acknowledgments
-
-Sarvam AI
- - Voice processing
-
-AGMARKNET
- - Market data
-
-Flutter
- - Mobile framework
-
-FastAPI
- - Backend framework
-
-📞 Contact
-
-For questions, feedback, or support:
-
-GitHub Issues: Create an issue
-
-Email: siddhantjainofficial26@gmail.com
-
-<div align="center">
-
-Made with ❤️ for Indian Farmers
-
-⭐ Star this repo if you find it useful!
-
-</div>
+MIT

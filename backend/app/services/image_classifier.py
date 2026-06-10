@@ -25,37 +25,51 @@ class UnifiedCropDiseaseClassifier(nn.Module):
 class CropDiseaseClassifier:
     def __init__(self, checkpoint_path: str, class_names_path: str):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.available = False
+        self.class_names = []
         
-        # Load class names
-        with open(class_names_path, 'r') as f:
-            self.class_names = json.load(f)
-        
-        # Load model
-        self.model = UnifiedCropDiseaseClassifier(
-            num_classes=len(self.class_names), 
-            pretrained=False
-        )
-        
-        # Load weights
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
-        if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-            state_dict = checkpoint['model_state_dict']
-        else:
-            state_dict = checkpoint
+        try:
+            # Load class names
+            with open(class_names_path, 'r') as f:
+                self.class_names = json.load(f)
             
-        self.model.load_state_dict(state_dict)
-        self.model.to(self.device)
-        self.model.eval()
-        
-        # Preprocessing
-        self.preprocess = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.CenterCrop((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
-        
-        print(f"✅ Crop disease classifier loaded with {len(self.class_names)} classes")
+            # Check if checkpoint is a real file (not a Git LFS pointer)
+            checkpoint_size = Path(checkpoint_path).stat().st_size if Path(checkpoint_path).exists() else 0
+            if checkpoint_size < 1000:
+                print(f"⚠️ Model checkpoint appears to be a Git LFS pointer ({checkpoint_size} bytes)")
+                print(f"   Run: git lfs pull")
+                return
+            
+            # Load model
+            self.model = UnifiedCropDiseaseClassifier(
+                num_classes=len(self.class_names), 
+                pretrained=False
+            )
+            
+            # Load weights
+            checkpoint = torch.load(checkpoint_path, map_location=self.device)
+            if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+                state_dict = checkpoint['model_state_dict']
+            else:
+                state_dict = checkpoint
+                
+            self.model.load_state_dict(state_dict)
+            self.model.to(self.device)
+            self.model.eval()
+            
+            # Preprocessing
+            self.preprocess = transforms.Compose([
+                transforms.Resize((224, 224)),
+                transforms.CenterCrop((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ])
+            
+            self.available = True
+            print(f"✅ Crop disease classifier loaded with {len(self.class_names)} classes")
+        except Exception as e:
+            print(f"⚠️ Crop disease classifier unavailable: {e}")
+            print(f"   Disease detection will use Gemini-only mode")
 
     def predict(self, image_path: str) -> str:
         img = Image.open(image_path).convert("RGB")

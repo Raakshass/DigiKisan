@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../chat_screen/chat_screen.dart';
 import 'register_screen.dart';
 import '../../services/auth_service.dart';
@@ -12,7 +10,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   String _errorMessage = '';
@@ -25,42 +23,22 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = '';
     });
 
-    try {
-      final response = await http.post(
-        Uri.parse('http://10.61.89.244:8000/api/auth/login'),
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: {
-          'username': _usernameController.text,
-          'password': _passwordController.text,
-        },
-      );
+    final error = await AuthService.login(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        // Store authentication data using AuthService
-        await AuthService.storeAuthData(
-          data['access_token'],
-          data['user_info']
-        );
-        
-        // Navigate to chat screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => ChatScreen()),
-        );
-      } else {
-        final error = json.decode(response.body);
-        setState(() {
-          _errorMessage = error['detail'] ?? 'Login failed';
-        });
-      }
-    } catch (e) {
+    if (!mounted) return;
+
+    if (error == null) {
+      // Login successful
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => ChatScreen()),
+      );
+    } else {
       setState(() {
-        _errorMessage = 'Network error. Please try again.';
-      });
-    } finally {
-      setState(() {
+        _errorMessage = error;
         _isLoading = false;
       });
     }
@@ -80,43 +58,43 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Logo
-                Container(
-                  height: 100,
-                  child: Center(
-                    child: Text(
-                      '🌾 DigiKisan',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green[800],
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 10),
                 Text(
-                  'Agricultural Intelligence Platform',
+                  '🌾 KisanMitra AI',
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[800],
+                  ),
                   textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'AI-Powered Agricultural Assistant',
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey[600],
+                    color: Colors.green[600],
                   ),
+                  textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 40),
 
-                // Username field
+                // Email field
                 TextFormField(
-                  controller: _usernameController,
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: 'Username',
+                    labelText: 'Email',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    prefixIcon: Icon(Icons.person),
+                    prefixIcon: Icon(Icons.email),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your username';
+                      return 'Please enter your email';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Please enter a valid email';
                     }
                     return null;
                   },
@@ -153,17 +131,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Text(
                       _errorMessage,
-                      style: TextStyle(color: Colors.red),
+                      style: TextStyle(color: Colors.red[700]),
                       textAlign: TextAlign.center,
                     ),
                   ),
-                SizedBox(height: 16),
+                if (_errorMessage.isNotEmpty) SizedBox(height: 16),
 
                 // Login button
                 ElevatedButton(
                   onPressed: _isLoading ? null : _login,
                   child: _isLoading
-                      ? CircularProgressIndicator(color: Colors.white)
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : Text(
                           'Login',
                           style: TextStyle(fontSize: 16, color: Colors.white),
@@ -212,7 +197,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }

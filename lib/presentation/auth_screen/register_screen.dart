@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../chat_screen/chat_screen.dart';
 import '../../services/auth_service.dart';
 
@@ -11,11 +9,9 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _fullNameController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _locationController = TextEditingController();
   bool _isLoading = false;
   String _errorMessage = '';
@@ -28,46 +24,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _errorMessage = '';
     });
 
-    try {
-      final response = await http.post(
-        Uri.parse('http://10.61.89.244:8000/api/auth/register'),
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: {
-          'username': _usernameController.text,
-          'email': _emailController.text,
-          'password': _passwordController.text,
-          'full_name': _fullNameController.text,
-          'phone': _phoneController.text.isEmpty ? null : _phoneController.text,
-          'location': _locationController.text.isEmpty ? null : _locationController.text,
-        },
-      );
+    final error = await AuthService.register(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      fullName: _fullNameController.text.trim(),
+      location: _locationController.text.trim().isEmpty
+          ? null
+          : _locationController.text.trim(),
+    );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        // Store authentication data using AuthService
-        await AuthService.storeAuthData(
-          data['access_token'],
-          data['user_info']
-        );
-        
-        // Registration successful - navigate to chat screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => ChatScreen()),
-        );
-      } else {
-        final error = json.decode(response.body);
-        setState(() {
-          _errorMessage = error['detail'] ?? 'Registration failed';
-        });
-      }
-    } catch (e) {
+    if (!mounted) return;
+
+    if (error == null) {
+      // Registration successful
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => ChatScreen()),
+      );
+    } else {
       setState(() {
-        _errorMessage = 'Network error. Please try again.';
-      });
-    } finally {
-      setState(() {
+        _errorMessage = error;
         _isLoading = false;
       });
     }
@@ -95,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   height: 80,
                   child: Center(
                     child: Text(
-                      '🌾 Join DigiKisan',
+                      '🌾 Join KisanMitra AI',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -119,28 +95,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your full name';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16),
-
-                // Username field
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    labelText: 'Username *',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    prefixIcon: Icon(Icons.account_circle),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a username';
-                    }
-                    if (value.length < 3) {
-                      return 'Username must be at least 3 characters';
                     }
                     return null;
                   },
@@ -193,25 +147,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 16),
 
-                // Phone field (optional)
-                TextFormField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Phone (Optional)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    prefixIcon: Icon(Icons.phone),
-                  ),
-                ),
-                SizedBox(height: 16),
-
                 // Location field (optional)
                 TextFormField(
                   controller: _locationController,
                   decoration: InputDecoration(
-                    labelText: 'Location (Optional)',
+                    labelText: 'Location (e.g. Lucknow, UP)',
+                    hintText: 'District, State',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -230,17 +171,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     child: Text(
                       _errorMessage,
-                      style: TextStyle(color: Colors.red),
+                      style: TextStyle(color: Colors.red[700]),
                       textAlign: TextAlign.center,
                     ),
                   ),
-                SizedBox(height: 16),
+                if (_errorMessage.isNotEmpty) SizedBox(height: 16),
 
                 // Register button
                 ElevatedButton(
                   onPressed: _isLoading ? null : _register,
                   child: _isLoading
-                      ? CircularProgressIndicator(color: Colors.white)
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : Text(
                           'Create Account',
                           style: TextStyle(fontSize: 16, color: Colors.white),
@@ -286,11 +234,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _fullNameController.dispose();
-    _phoneController.dispose();
     _locationController.dispose();
     super.dispose();
   }

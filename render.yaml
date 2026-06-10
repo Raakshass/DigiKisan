@@ -1,0 +1,24 @@
+# render.yaml — Render Blueprint for KisanMitra AI Backend
+# Deploy: Connect GitHub repo → Render auto-deploys on push
+services:
+  - type: web
+    name: kisanmitra-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: singapore  # Closest to India
+    healthCheckPath: /
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: OPENROUTER_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: OPENROUTER_MODEL
+        value: google/gemma-3-27b-it:free
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/firebase-sa.json

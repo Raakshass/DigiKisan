@@ -22,3 +22,28 @@ __pycache__/
 # Environment variables
 backend/.env
 .env
+
+# Android signing
+*.jks
+*.keystore
+android/key.properties
+
+# Firebase
+google-services.json
+firebase_options.dart
+firebase-sa.json
+*-firebase-adminsdk-*.json
+
+# Build artifacts
+*.apk
+*.aab
+
+# ChromaDB data
+backend/chroma_data/
+backend/chroma_db/
+backend/tmp/
+
+# Signing
+upload-keystore.jks
+*.jks
+

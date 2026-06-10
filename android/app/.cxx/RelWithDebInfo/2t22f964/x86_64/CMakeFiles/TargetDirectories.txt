@@ -1,0 +1,2 @@
+D:/digikisan-chatbot/android/app/.cxx/RelWithDebInfo/2t22f964/x86_64/CMakeFiles/edit_cache.dir
+D:/digikisan-chatbot/android/app/.cxx/RelWithDebInfo/2t22f964/x86_64/CMakeFiles/rebuild_cache.dir

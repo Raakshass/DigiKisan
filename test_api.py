@@ -4,9 +4,9 @@ import json
 BASE_URL = "http://localhost:8000/api"
 
 def test_all_endpoints():
-    """Test all DigiKisan backend endpoints"""
+    """Test all KisanMitra AI backend endpoints"""
     
-    print("🧪 Testing DigiKisan Backend API\n" + "="*50)
+    print("🧪 Testing KisanMitra AI Backend API\n" + "="*50)
     
     # 1. Health check
     print("1️⃣ Testing Health Check...")

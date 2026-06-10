@@ -11,16 +11,23 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-from selenium import webdriver
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
-from webdriver_manager.chrome import ChromeDriverManager
 import time
+
+# Selenium — optional (legacy scraper replaced by price_scraper.py)
+try:
+    from selenium import webdriver
+    from selenium.webdriver.support.ui import Select
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
+    from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
+    from webdriver_manager.chrome import ChromeDriverManager
+    _SELENIUM_AVAILABLE = True
+except ImportError:
+    _SELENIUM_AVAILABLE = False
+    print("[WARN] Selenium not installed -- legacy scraper disabled (using price_scraper.py instead)")
 
 # ---- CONFIG ----
 TOP_K_PER_MARKET = 3  # number of latest rows per market to average
@@ -61,8 +68,13 @@ def mean_pooling(model_output, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
+# Compute base directory for resolving relative paths
+_BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 class TextClassifierInference:
-    def __init__(self, model_dir=r"D:\maxgush_s_application\backend\models\text_classifier"):
+    def __init__(self, model_dir=None):
+        if model_dir is None:
+            model_dir = os.path.join(_BACKEND_DIR, "models", "text_classifier")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         with open(os.path.join(model_dir, "config.pkl"), "rb") as f:
             self.config = pickle.load(f)
@@ -100,15 +112,19 @@ class TextClassifierInference:
                 }
             }
 
-# Initialize the classifier
-classifier = TextClassifierInference()
+# NOTE: Do NOT instantiate at module level — use lazy init via ModelSingleton in routes.py
+# classifier = TextClassifierInference()
 
 # ---------------- Slot Filler ----------------
 class SlotFiller:
     """Slot filler with a pattern-matching feedback loop."""
     def __init__(self,
-                 commodity_file: str = r"D:\maxgush_s_application\backend\commodity_mappings.csv",
-                 district_file: str = r"D:\maxgush_s_application\backend\up_districts.csv"):
+                 commodity_file: str = None,
+                 district_file: str = None):
+        if commodity_file is None:
+            commodity_file = os.path.join(_BACKEND_DIR, "commodity_mappings.csv")
+        if district_file is None:
+            district_file = os.path.join(_BACKEND_DIR, "up_districts.csv")
         self.commodity_list, self.commodity_map = self._load_from_csv(commodity_file, "Name", "Code")
         self.up_cities, self.district_map = self._load_from_csv(district_file, "District Name", "District Code")
         self.global_patterns = [
