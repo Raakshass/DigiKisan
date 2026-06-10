@@ -34,13 +34,13 @@ async def lifespan(app: FastAPI):
         print("[WARN] OPENROUTER_API_KEY not set -- chatbot will return fallback responses")
         print("   Get a free key at: https://openrouter.ai/keys")
     
-    # Connect to MongoDB (non-fatal if unavailable)
+    # Connect to Firestore (non-fatal if unavailable)
     try:
         await connect_to_mongo()
-        print("✅ MongoDB connected")
+        print("✅ Firestore connected")
     except Exception as e:
-        print(f"⚠️  MongoDB unavailable: {e}")
-        print("   Auth and analytics will be disabled. Chat still works.")
+        print(f"⚠️  Firestore unavailable: {e}")
+        print("   Session storage and analytics will be disabled. Chat still works.")
 
     # Initialize RAG knowledge base in background thread (non-blocking)
     def _init_rag():
@@ -96,10 +96,10 @@ app = FastAPI(
         "- 💬 RAG-augmented AI chatbot with agricultural knowledge base\n"
         "- 🔍 Real-time market price data (async, no Selenium)\n"
         "- 🌿 Crop disease detection with ResNet50 + AI consultation\n"
-        "- 📊 Session analytics and price caching\n"
+        "- 📊 Session analytics and price caching (Firestore)\n"
         "- 🎙️ Voice STT/TTS via Sarvam AI\n"
-        "- 🔐 JWT authentication\n\n"
-        "Built with FastAPI, LangChain, ChromaDB, MongoDB, and OpenRouter (DeepSeek)."
+        "- 🔐 Firebase Authentication\n\n"
+        "Built with FastAPI, LangChain, ChromaDB, Firestore, and OpenRouter (DeepSeek)."
     ),
     version="1.0.0",
     lifespan=lifespan,

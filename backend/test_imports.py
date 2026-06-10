@@ -11,10 +11,11 @@ except ImportError as e:
     errors.append(f"Core: {e}")
     print(f"[FAIL] Core: {e}")
 
-# 2. Database
+# 2. Database (Firestore via firebase-admin)
 try:
-    import motor, redis
-    print(f"[OK] Motor {motor.version}, Redis {redis.__version__}")
+    import firebase_admin
+    from firebase_admin import firestore
+    print(f"[OK] firebase-admin {firebase_admin.__version__}")
 except ImportError as e:
     errors.append(f"DB: {e}")
     print(f"[FAIL] DB: {e}")

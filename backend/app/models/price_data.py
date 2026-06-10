@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
-from bson import ObjectId
 
 class PriceDataModel(BaseModel):
     """Model for storing cached price data from AgMarkNet"""
@@ -25,10 +24,7 @@ class PriceDataModel(BaseModel):
     quality_score: float = Field(default=1.0, description="Data quality indicator (0-1)")
     
     class Config:
-        # Allow ObjectId to be used
-        arbitrary_types_allowed = True
         json_encoders = {
-            ObjectId: str,
             datetime: lambda v: v.isoformat()
         }
 
@@ -50,9 +46,7 @@ class UserSessionModel(BaseModel):
     completed_queries: int = Field(default=0, description="Number of completed queries")
     
     class Config:
-        arbitrary_types_allowed = True
         json_encoders = {
-            ObjectId: str,
             datetime: lambda v: v.isoformat()
         }
 
@@ -77,8 +71,6 @@ class QueryAnalyticsModel(BaseModel):
     time_of_day: str = Field(..., description="morning/afternoon/evening")
     
     class Config:
-        arbitrary_types_allowed = True
         json_encoders = {
-            ObjectId: str,
             datetime: lambda v: v.isoformat()
         }
