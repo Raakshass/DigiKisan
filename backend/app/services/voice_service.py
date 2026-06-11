@@ -78,17 +78,17 @@ class SarvamVoiceService:
             
             # Select appropriate voice based on language
             voice_mapping = {
-                'en-IN': 'meera',
-                'hi-IN': 'aditi',
-                'bn-IN': 'rashika',
-                'ta-IN': 'amala',
+                'en-IN': 'anushka',
+                'hi-IN': 'anushka',
+                'bn-IN': 'anushka',
+                'ta-IN': 'kavitha',
                 'te-IN': 'shreya',
-                'mr-IN': 'shantanu',
-                'gu-IN': 'kinjal',
-                'kn-IN': 'nayana',
-                'ml-IN': 'nandu',
-                'pa-IN': 'kamaljeet',
-                'or-IN': 'sibani'
+                'mr-IN': 'anushka',
+                'gu-IN': 'anushka',
+                'kn-IN': 'anushka',
+                'ml-IN': 'anushka',
+                'pa-IN': 'anushka',
+                'or-IN': 'anushka'
             }
             
             payload = {
