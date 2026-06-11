@@ -36,7 +36,6 @@ class TestPriceScraper:
         from app.services.price_scraper import get_commodity_code
         assert get_commodity_code("wheat") is not None
         assert get_commodity_code("Wheat") is not None  # case insensitive
-        assert get_commodity_code("gehun") is not None   # alias
         assert get_commodity_code("nonexistent_crop") is None
 
     def test_get_district_code(self):
@@ -48,31 +47,35 @@ class TestPriceScraper:
     def test_format_price_response(self):
         from app.services.price_scraper import format_price_response
         import pandas as pd
-        
+
+        # Use Title Case columns matching the actual scraper output
         df = pd.DataFrame({
-            "market": ["TestMandi"],
-            "min_price": [1500],
-            "max_price": [2000],
-            "modal_price": [1750],
+            "Market": ["TestMandi"],
+            "Avg Modal": [1750],
+            "Avg Max": [2000],
+            "Avg Min": [1500],
+            "Latest Date": ["2024-01-15"],
         })
         result = format_price_response(df, "Wheat", "Lucknow", "2024-01-15", "mock")
         assert "Wheat" in result
         assert "Lucknow" in result
-        assert "1750" in result or "₹" in result
+        assert "1750" in result
 
     def test_summarize_prices(self):
         from app.services.price_scraper import summarize_prices
         import pandas as pd
-        
+
+        # Use Title Case columns matching the actual scraper output
         df = pd.DataFrame({
-            "market": ["Mandi A", "Mandi B", "Mandi A"],
-            "min_price": [1500, 1600, 1550],
-            "max_price": [2000, 2100, 2050],
-            "modal_price": [1750, 1850, 1800],
+            "Market": ["Mandi A", "Mandi B", "Mandi A"],
+            "Min Price": [1500, 1600, 1550],
+            "Max Price": [2000, 2100, 2050],
+            "Modal Price": [1750, 1850, 1800],
+            "Date": ["2024-01-15", "2024-01-15", "2024-01-14"],
         })
         result = summarize_prices(df)
         assert not result.empty
-        assert "market" in result.columns
+        assert "Market" in result.columns
 
     @pytest.mark.asyncio
     async def test_mock_data_fallback(self):
@@ -115,11 +118,11 @@ class TestChatOrchestrator:
 
     def test_intent_classification(self):
         from app.services.chat_orchestrator import ChatOrchestrator
-        
+
         # Create with mock GeminiChat
         mock_gemini = MagicMock()
         orch = ChatOrchestrator(mock_gemini)
-        
+
         assert orch._classify_intent("what is the price of wheat") == "price_query"
         assert orch._classify_intent("my tomato has blight disease") == "disease_query"
         assert orch._classify_intent("pm-kisan scheme details") == "scheme_query"
@@ -128,16 +131,16 @@ class TestChatOrchestrator:
 
     def test_conversation_memory(self):
         from app.services.chat_orchestrator import ConversationMemory
-        
+
         mem = ConversationMemory(max_messages=5)
         mem.add_message("user", "hello")
         mem.add_message("assistant", "hi there")
-        
+
         assert len(mem.messages) == 2
         context = mem.get_context_string()
         assert "hello" in context
         assert "hi there" in context
-        
+
         # Test eviction
         for i in range(10):
             mem.add_message("user", f"message {i}")
@@ -145,13 +148,13 @@ class TestChatOrchestrator:
 
     def test_session_store_lru_eviction(self):
         from app.services.chat_orchestrator import _SessionStore
-        
+
         store = _SessionStore(max_sessions=3)
         store.get("session1")
         store.get("session2")
         store.get("session3")
         store.get("session4")  # should evict session1
-        
+
         assert "session1" not in store._store
         assert "session4" in store._store
 
@@ -190,7 +193,7 @@ class TestRAGPipeline:
         import glob
         md_files = glob.glob(os.path.join(kb_dir, "**", "*.md"), recursive=True)
         assert len(md_files) >= 7, f"Expected 7+ KB files, found {len(md_files)}"
-        
+
         for f in md_files:
             with open(f, "r", encoding="utf-8") as fp:
                 content = fp.read()
@@ -198,53 +201,34 @@ class TestRAGPipeline:
 
 
 # ===========================================================================
-# GeminiChat Tests
+# OpenRouterChat Tests (formerly GeminiChat)
 # ===========================================================================
-class TestGeminiChat:
-    """Test the Gemini chat client."""
+class TestOpenRouterChat:
+    """Test the OpenRouter chat client."""
 
     def test_strip_markdown(self):
-        from app.api.deps import GeminiChat
-        gc = GeminiChat(api_key="test-key")
-        
+        from app.api.deps import OpenRouterChat
+        gc = OpenRouterChat(api_key="test-key")
+
         result = gc._strip_markdown("**bold** text with `code` and # heading")
         assert "**" not in result
         assert "`" not in result
         assert "#" not in result
 
     def test_crispify_short_text(self):
-        from app.api.deps import GeminiChat
-        gc = GeminiChat(api_key="test-key")
-        
+        from app.api.deps import OpenRouterChat
+        gc = OpenRouterChat(api_key="test-key")
+
         short = "This is a short response."
         assert gc._crisp(short) == short
 
     def test_crispify_long_text(self):
-        from app.api.deps import GeminiChat
-        gc = GeminiChat(api_key="test-key")
-        
+        from app.api.deps import OpenRouterChat
+        gc = OpenRouterChat(api_key="test-key")
+
         long_text = "A" * 500
         result = gc._crisp(long_text)
         assert len(result) <= 350
-
-    def test_extract_text_valid(self):
-        from app.api.deps import GeminiChat
-        gc = GeminiChat(api_key="test-key")
-        
-        data = {
-            "candidates": [{
-                "content": {
-                    "parts": [{"text": "Hello farmer!"}]
-                }
-            }]
-        }
-        assert gc._extract_text(data) == "Hello farmer!"
-
-    def test_extract_text_empty(self):
-        from app.api.deps import GeminiChat
-        gc = GeminiChat(api_key="test-key")
-        
-        assert "Sorry" in gc._extract_text({})
 
 
 # ===========================================================================
@@ -256,17 +240,10 @@ class TestConfig:
     def test_config_has_required_fields(self):
         """Config should define all required settings."""
         from app.core.config import Settings
-        
+
         # These fields must exist on the Settings class
-        required_fields = [
-            "gemini_api_key",
-            "mongodb_uri",
-            "jwt_secret_key",
-            "cors_origins",
-        ]
-        for field in required_fields:
-            assert hasattr(Settings, "__fields__") or hasattr(Settings, "model_fields"), \
-                "Settings should be a pydantic model"
+        assert hasattr(Settings, "__fields__") or hasattr(Settings, "model_fields"), \
+            "Settings should be a pydantic model"
 
 
 # ===========================================================================

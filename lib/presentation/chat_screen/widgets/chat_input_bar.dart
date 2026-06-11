@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:digikisan/core/app_export.dart';
 import 'package:digikisan/widgets/custom_button.dart';
-import 'package:digikisan/widgets/custom_image_view.dart';
 
 /// Chat input bar with text field, voice recording, image upload, and send button.
 /// Extracted from chat_screen.dart for reusability and testability.

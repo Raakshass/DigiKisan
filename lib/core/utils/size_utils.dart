@@ -9,8 +9,6 @@ const num FIGMA_DESIGN_STATUS_BAR = 0;
 
 // ✅ UPDATED: Enhanced responsive extension with .w, .h, .fSize
 extension ResponsiveExtension on num {
-  double get _width => SizeUtils.width;
-
   /// Get responsive width
   double get w => ScreenUtil().setWidth(this);
 

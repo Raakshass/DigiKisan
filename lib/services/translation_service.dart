@@ -10,7 +10,6 @@ class TranslationService {
     defaultValue: '',  // Will gracefully fail if not set
   );
   static const String _sarvamBaseUrl = 'https://api.sarvam.ai';
-  static String get _backendBaseUrl => ApiService.baseUrl;
   
   // ✅ Official Sarvam language codes
   static const Map<String, String> supportedLanguages = {

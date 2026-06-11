@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_export.dart';
-import '../../widgets/custom_button.dart';
 import '../../widgets/custom_image_view.dart';
 
 class MenuScreen extends StatelessWidget {

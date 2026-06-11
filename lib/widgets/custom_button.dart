@@ -172,7 +172,6 @@ class CustomButton extends StatelessWidget {
   ) {
     final effectiveBackgroundColor = backgroundColor ?? appTheme.whiteCustom;
     final effectiveBorderColor = borderColor ?? appTheme.blackCustom;
-    final effectiveTextColor = textColor ?? appTheme.green800;
 
     return OutlinedButton(
       onPressed: onPressed,
@@ -200,7 +199,6 @@ class CustomButton extends StatelessWidget {
     FontWeight fontWeight,
   ) {
     final effectiveBackgroundColor = backgroundColor ?? Color(0xFFF9F9FA);
-    final effectiveTextColor = textColor ?? appTheme.blackCustom;
 
     return ElevatedButton(
       onPressed: onPressed,

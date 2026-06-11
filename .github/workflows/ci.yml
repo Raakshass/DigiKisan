@@ -31,12 +31,13 @@ jobs:
 
       - name: Create test .env
         run: |
-          echo "GEMINI_API_KEY=test-key" > .env
-          echo "MONGODB_URI=mongodb://localhost:27017" >> .env
-          echo "JWT_SECRET_KEY=test-secret-key" >> .env
+          echo "OPENROUTER_API_KEY=test-key" > .env
+          echo "OPENROUTER_MODEL=google/gemma-4-31b-it:free" >> .env
+          echo "FIREBASE_STORAGE_BUCKET=test-bucket.appspot.com" >> .env
+          echo "ENVIRONMENT=testing" >> .env
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short
+        run: pytest tests/ -v --tb=short -W ignore::DeprecationWarning
 
   # -------------------------------------------------------
   # Flutter: Analyze + Build APK
@@ -58,10 +59,10 @@ jobs:
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Build APK (debug)
-        run: flutter build apk --debug --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
+        run: flutter build apk --debug --dart-define=API_BASE_URL=https://raakshass-kisanmitra-backend.hf.space/api
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

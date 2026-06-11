@@ -2,11 +2,12 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApiService {
-  // Backend URL — configurable via environment, defaults to localhost for development.
-  // For Android emulator use 10.0.2.2, for physical device use your machine's LAN IP.
+  // Backend URL — configurable via --dart-define=API_BASE_URL=...
+  // Defaults to production HF Spaces backend.
+  // For local dev: flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000/api', // Android emulator default
+    defaultValue: 'https://raakshass-kisanmitra-backend.hf.space/api',
   );
 
   /// Start a new chat session. Returns {ok, session_id, message}.

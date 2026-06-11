@@ -15,7 +15,5 @@ class AppRoutes {
         loginScreen: (context) => LoginScreen(),
         chatScreen: (context) => ChatScreen(),
         menuScreen: (context) => MenuScreen(),
-        // ✅ CHANGED: Initial route now goes to LoginScreen
-        initialRoute: (context) => LoginScreen(),
       };
 }
