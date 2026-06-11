@@ -58,6 +58,24 @@ class OpenRouterChat:
         dot = cut.rfind(".")
         return (cut[: dot + 1] if dot > 120 else cut).strip()
 
+    def _extract_text(self, data: Dict[str, Any]) -> str:
+        """Extract assistant text from OpenRouter or legacy Gemini response payloads."""
+        choices = data.get("choices", [])
+        if choices:
+            content = choices[0].get("message", {}).get("content", "")
+            if isinstance(content, str) and content.strip():
+                return content.strip()
+
+        candidates = data.get("candidates", [])
+        if candidates:
+            parts = candidates[0].get("content", {}).get("parts", [])
+            if parts:
+                text = parts[0].get("text", "")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
+
+        return "Sorry, I couldn't form a proper answer."
+
     def send_message(self, message: str, system_prompt: Optional[str] = None) -> str:
         """Send a message to OpenRouter with automatic model fallback on 429."""
         concise_rule = (
@@ -105,11 +123,7 @@ class OpenRouterChat:
                     return "Having trouble fetching advice now. Try again shortly."
 
                 data = resp.json()
-                reply_raw = (
-                    data.get("choices", [{}])[0]
-                    .get("message", {})
-                    .get("content", "")
-                )
+                reply_raw = self._extract_text(data)
                 if not reply_raw:
                     return "Sorry, I couldn't form a proper answer."
 

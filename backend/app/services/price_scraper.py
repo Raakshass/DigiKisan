@@ -55,6 +55,7 @@ STATE_CODES = {
 # Commodity name → AgMarkNet code mapping
 COMMODITY_MAP = {
     "wheat": "23",
+    "gehun": "23",
     "rice": "1",
     "paddy": "1",
     "maize": "25",
@@ -514,6 +515,13 @@ def summarize_prices(df: pd.DataFrame, top_k: int = TOP_K_PER_MARKET) -> pd.Data
         return df
 
     out = df.copy()
+    out = out.rename(columns={
+        "market": "Market",
+        "modal_price": "Modal Price",
+        "min_price": "Min Price",
+        "max_price": "Max Price",
+        "date": "Date",
+    })
     out["Market"] = out["Market"].astype(str).str.strip()
     out["Modal Price"] = pd.to_numeric(out.get("Modal Price", pd.NA), errors="coerce")
     out["Min Price"] = pd.to_numeric(out.get("Min Price", pd.NA), errors="coerce")
@@ -541,6 +549,8 @@ def summarize_prices(df: pd.DataFrame, top_k: int = TOP_K_PER_MARKET) -> pd.Data
         "Max Price": "Avg Max",
         "Date": "Latest Date",
     })
+    # Backward-compatible alias expected by legacy tests/callers.
+    agg["market"] = agg["Market"]
     return agg
 
 
@@ -562,25 +572,38 @@ def format_price_response(
             "Try a different date or location."
         )
 
+    normalized_df = summary_df.rename(columns={
+        "market": "Market",
+        "modal_price": "Modal Price",
+        "min_price": "Min Price",
+        "max_price": "Max Price",
+    })
+
     lines = [
         f"Price Information for {commodity} in {district}:",
         f"Date: {date_str}",
         "",
     ]
 
-    for _, row in summary_df.iterrows():
+    for _, row in normalized_df.iterrows():
         market = row.get("Market", "Unknown")
-        modal = row.get("Avg Modal", "N/A")
-        max_p = row.get("Avg Max", "N/A")
-        min_p = row.get("Avg Min", "N/A")
+        modal = row.get("Avg Modal", row.get("Modal Price", "N/A"))
+        max_p = row.get("Avg Max", row.get("Max Price", "N/A"))
+        min_p = row.get("Avg Min", row.get("Min Price", "N/A"))
         lines.append(f"{market}")
         lines.append(f"  Modal: Rs.{modal}/quintal | Max: Rs.{max_p} | Min: Rs.{min_p}")
         lines.append("")
 
     # Overall average
     try:
-        if "Avg Modal" in summary_df.columns:
-            modal_prices = summary_df["Avg Modal"].dropna()
+        if "Avg Modal" in normalized_df.columns:
+            modal_prices = normalized_df["Avg Modal"].dropna()
+            if len(modal_prices) > 0:
+                avg = modal_prices.mean()
+                lines.append(f"Average Across Markets: Rs.{avg:.0f}/quintal")
+                lines.append("")
+        elif "Modal Price" in normalized_df.columns:
+            modal_prices = pd.to_numeric(normalized_df["Modal Price"], errors="coerce").dropna()
             if len(modal_prices) > 0:
                 avg = modal_prices.mean()
                 lines.append(f"Average Across Markets: Rs.{avg:.0f}/quintal")
