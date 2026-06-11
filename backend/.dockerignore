@@ -1,10 +1,11 @@
 # KisanMitra AI Backend — Docker Build Ignore
 # Prevents secrets and dev artifacts from leaking into the Docker image
 
-# Secrets (mounted as volumes instead)
+# Secrets (injected via env vars at runtime on HF Spaces)
 firebase-sa.json
 *.json.json
 .env
+.env.example
 
 # Dev artifacts
 __pycache__/
@@ -25,5 +26,11 @@ chroma_db/
 # Tests (not needed in production image)
 tests/
 
-# Documentation
-*.md
+# Dev test scripts
+test_*.py
+
+# Documentation (except start.sh which is needed)
+README.md
+
+# Backup models
+backup_original_models/
