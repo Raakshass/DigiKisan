@@ -115,9 +115,23 @@ async def chat_message(
         # Store user message in session
         await _store_message(session_service, session_id, "user_message", message)
 
-        # --- Intent classification ---
+        # --- Intent classification with pre-filter ---
         if not session_state.get("in_slot_fill"):
-            classification = clf.predict(message)
+            # Pre-filter: override the ML classifier for known patterns
+            # This prevents crop names (wheat, maize) from triggering price_enquiry
+            # when the question is actually about farming or schemes
+            is_price = _is_price_query(message)
+
+            if is_price:
+                # Confirmed price query → go to slot filler
+                classification = {"prediction": "price_enquiry"}
+            else:
+                classification = clf.predict(message)
+                # Double-check: if classifier says price but pre-filter says no,
+                # trust the pre-filter (it's more precise)
+                if classification["prediction"] == "price_enquiry" and _should_override_price(message):
+                    classification["prediction"] = "general"
+
             if classification["prediction"] != "price_enquiry":
                 # General chat → RAG-augmented ChatOrchestrator
                 orchestrator = get_orchestrator(gemini_chat)
@@ -447,3 +461,76 @@ def _auth_response(response_text: str, user_info: Dict[str, Any], intent: str) -
         "email": user_info.get("email"),
         "intent": intent,
     }
+
+
+# ---------------------------------------------------------------------------
+# Intent Pre-Filter (overrides ML classifier for known patterns)
+# ---------------------------------------------------------------------------
+# Keywords that indicate a NON-price query (farming advice, schemes, knowledge)
+_SCHEME_KEYWORDS = {
+    "pm-kisan", "pmfby", "kcc", "kisan credit", "subsidy", "yojana",
+    "scheme", "insurance", "e-nam", "soil health card", "shc",
+    "government", "sarkari", "pradhan mantri", "pkvy",
+}
+_FARMING_KEYWORDS = {
+    "urea", "fertilizer", "npk", "dap", "seed rate", "sowing",
+    "harvest", "variety", "irrigation", "msp", "spacing", "nursery",
+    "compost", "vermicompost", "organic", "jeevamrut", "crop rotation",
+    "soil ph", "drip", "mulching", "pruning", "grafting", "intercropping",
+    "planting", "transplanting", "weed", "storage", "seed treatment",
+    "how to", "kaise", "kab", "kitna", "best time", "symptoms",
+    "identify", "treat", "control", "prevent", "protect", "manage",
+    "improve", "difference", "benefit", "recommended", "ideal",
+    "solar pump", "grow", "uga", "buvai",
+}
+# Hindi/Hinglish price keywords that MUST be paired with a location
+_HINDI_PRICE_KEYWORDS = {"bhav", "rate", "daam", "kimat", "mol"}
+# Known UP district names for Hindi price query detection
+_DISTRICT_NAMES = set(DISTRICT_MAP_UP.keys())
+
+
+def _is_price_query(message: str) -> bool:
+    """
+    Detect if a message is genuinely a price/market rate query.
+    Must have BOTH a price intent keyword AND a location/commodity in price context.
+    Hindi: "potato ka rate kya hai agra mein?" → True
+    English: "wheat price in lucknow today" → True
+    NOT: "what is the MSP for wheat" → False (MSP is knowledge, not live price)
+    """
+    msg_lower = message.lower()
+
+    # Hindi price detection: price keyword + city name
+    if any(k in msg_lower for k in _HINDI_PRICE_KEYWORDS):
+        if any(city in msg_lower for city in _DISTRICT_NAMES):
+            return True
+
+    # English price detection: explicit "price in <city>" or "rate in <city>"
+    price_words = {"price", "rate", "cost", "bhav", "daam"}
+    has_price_word = any(w in msg_lower for w in price_words)
+    has_location = any(city in msg_lower for city in _DISTRICT_NAMES)
+    has_mandi = "mandi" in msg_lower or "market" in msg_lower
+
+    if has_price_word and (has_location or has_mandi):
+        return True
+
+    return False
+
+
+def _should_override_price(message: str) -> bool:
+    """
+    Returns True if the message should NOT go to the price slot filler,
+    even if the ML classifier says price_enquiry.
+    Catches: "MSP for wheat", "urea per acre for wheat", "PM-KISAN scheme",
+             "NPK vs DAP", "seed rate for maize", "solar pump subsidy"
+    """
+    msg_lower = message.lower()
+
+    # If message contains scheme/government keywords → not a price query
+    if any(k in msg_lower for k in _SCHEME_KEYWORDS):
+        return True
+
+    # If message contains farming/knowledge keywords → not a price query
+    if any(k in msg_lower for k in _FARMING_KEYWORDS):
+        return True
+
+    return False

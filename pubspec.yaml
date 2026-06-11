@@ -1,6 +1,6 @@
 name: digikisan
 description: AI-Powered Agricultural Assistant for Indian Farmers — real-time market prices, crop disease detection, and multilingual voice chat.
-version: 1.0.0+1
+version: 1.0.0+3
 
 environment: 
   sdk: ^3.6.0
