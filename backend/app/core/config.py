@@ -14,7 +14,12 @@ class Settings(BaseSettings):
     # Default model (100% free): google/gemma-4-31b-it:free
     # Alternatives: meta-llama/llama-3.3-70b-instruct:free, qwen/qwen3-coder:free
     openrouter_api_key: str = ""
+    openrouter_api_key_2: str = ""  # Second key for round-robin rate-limit avoidance
     openrouter_model: str = "google/gemma-4-31b-it:free"
+
+    # --- HF Inference API (Primary LLM Provider) ---
+    # Token with "Make calls to Inference Providers" permission
+    hf_inference_token: str = ""
 
     # --- JWT Authentication ---
     # SECURITY: Generate via: python -c "import secrets; print(secrets.token_urlsafe(64))"

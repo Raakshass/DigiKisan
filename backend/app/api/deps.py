@@ -2,34 +2,48 @@
 KisanMitra AI API — Shared Dependencies
 =====================================
 Centralized dependency injection for all routers.
-Lazy-loaded model singletons, database services, and OpenRouter LLM client.
+Lazy-loaded model singletons, database services, and multi-provider LLM client.
 """
 import os
 import re
+import time
 import httpx
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 from fastapi import Depends
 
 from app.core.config import settings
 from app.services.database_service import PriceDataService, AnalyticsService, SessionService
+
+
 # ---------------------------------------------------------------------------
-# OpenRouterChat — Vendor-unlocked LLM via OpenRouter (OpenAI-compatible API)
+# Multi-Provider LLM Client — HF Inference + OpenRouter round-robin
 # ---------------------------------------------------------------------------
 class OpenRouterChat:
     """
-    LLM chat client via OpenRouter (https://openrouter.ai).
+    Multi-provider LLM client with automatic failover:
 
-    Uses the OpenAI-compatible /api/v1/chat/completions endpoint.
-    Includes automatic model fallback: if primary model returns 429,
-    retries with next available free model.
+    1. HF Inference API (primary — generous free tier, OpenAI-compatible)
+    2. OpenRouter Key 1 → 6 free models
+    3. OpenRouter Key 2 → 6 free models
+    4. Retry with exponential backoff
+
+    Total: ~18 model slots before "busy" — practically impossible to exhaust.
     """
 
-    BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
+    OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+    HF_INFERENCE_URL = "https://api-inference.huggingface.co/v1/chat/completions"
 
-    # Fallback chain: tried in order on 429
-    FREE_MODELS = [
+    # HF Inference API models (free tier, fast)
+    HF_MODELS = [
+        "meta-llama/Llama-3.2-3B-Instruct",
+        "microsoft/Phi-3.5-mini-instruct",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+    ]
+
+    # OpenRouter free models
+    OPENROUTER_MODELS = [
         "google/gemma-4-31b-it:free",
         "nvidia/nemotron-3-super-120b-a12b:free",
         "meta-llama/llama-3.3-70b-instruct:free",
@@ -39,9 +53,16 @@ class OpenRouterChat:
     ]
 
     def __init__(self, api_key: str, model: str = "google/gemma-4-31b-it:free"):
-        self.api_key = api_key
+        self.api_key = api_key  # Primary OpenRouter key
         self.model = model
         self.chat_history: list = []
+
+        # Load additional keys from environment
+        self.hf_token = os.environ.get("HF_INFERENCE_TOKEN", "")
+        self.openrouter_keys = [k for k in [
+            self.api_key,
+            os.environ.get("OPENROUTER_API_KEY_2", ""),
+        ] if k]
 
     def _strip_markdown(self, s: str) -> str:
         s = re.sub(r"[*`#>•\\-]+", "", s)
@@ -58,34 +79,77 @@ class OpenRouterChat:
         dot = cut.rfind(".")
         return (cut[: dot + 1] if dot > 120 else cut).strip()
 
-    def send_message(self, message: str, system_prompt: Optional[str] = None) -> str:
-        """Send a message to OpenRouter with automatic model fallback on 429."""
-        import time
-
+    def _build_messages(self, message: str, system_prompt: Optional[str] = None) -> list:
         concise_rule = (
             "Reply in plain text only (no markdown). Max 4 short sentences total. "
             "End with ONE brief follow-up question if helpful. Keep under 350 characters."
         )
-
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": f"{system_prompt.strip()}\n\n{concise_rule}"})
         else:
             messages.append({"role": "system", "content": concise_rule})
         messages.append({"role": "user", "content": message})
+        return messages
+
+    def _try_hf_inference(self, messages: list) -> Optional[str]:
+        """Try HF Inference API (primary provider)."""
+        if not self.hf_token:
+            return None
 
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
-            "HTTP-Referer": "https://kisanmitra.ai",
-            "X-Title": "KisanMitra AI",
+            "Authorization": f"Bearer {self.hf_token}",
         }
 
-        # Build model order: primary first, then fallbacks
-        models_to_try = [self.model] + [m for m in self.FREE_MODELS if m != self.model]
+        for model_id in self.HF_MODELS:
+            payload = {
+                "model": model_id,
+                "messages": messages,
+                "temperature": 0.4,
+                "top_p": 0.9,
+                "max_tokens": 256,
+                "stream": False,
+            }
+            try:
+                resp = httpx.post(
+                    self.HF_INFERENCE_URL,
+                    headers=headers,
+                    json=payload,
+                    timeout=30.0,
+                )
+                if resp.status_code in (429, 503, 404):
+                    print(f"HF Inference {resp.status_code} on {model_id}, trying next...")
+                    continue
+                if resp.status_code != 200:
+                    print(f"HF Inference HTTP {resp.status_code}: {resp.text[:200]}")
+                    continue
 
-        # Retry the entire chain up to 3 times with exponential backoff
-        for attempt in range(3):
+                data = resp.json()
+                reply = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                if reply:
+                    print(f"HF Inference OK: {model_id}")
+                    return reply
+            except httpx.TimeoutException:
+                print(f"HF Inference timeout on {model_id}")
+                continue
+            except Exception as e:
+                print(f"HF Inference error on {model_id}: {e}")
+                continue
+        return None
+
+    def _try_openrouter(self, messages: list) -> Optional[str]:
+        """Try OpenRouter with round-robin across multiple API keys."""
+        models_to_try = [self.model] + [m for m in self.OPENROUTER_MODELS if m != self.model]
+
+        for api_key in self.openrouter_keys:
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+                "HTTP-Referer": "https://kisanmitra.ai",
+                "X-Title": "KisanMitra AI",
+            }
+
             for model_id in models_to_try:
                 payload = {
                     "model": model_id,
@@ -96,53 +160,68 @@ class OpenRouterChat:
                 }
                 try:
                     resp = httpx.post(
-                        self.BASE_URL,
+                        self.OPENROUTER_URL,
                         headers=headers,
                         json=payload,
                         timeout=25.0,
                     )
                     if resp.status_code == 429:
-                        # Rate limited — try next model
-                        print(f"OpenRouter 429 on {model_id}, trying next...")
+                        print(f"OpenRouter 429 on {model_id} (key ...{api_key[-6:]}), trying next...")
                         continue
                     if resp.status_code == 404:
-                        # Model not found — skip permanently
                         print(f"OpenRouter 404 on {model_id}, skipping...")
                         continue
                     if resp.status_code != 200:
                         print(f"OpenRouter HTTP {resp.status_code}: {resp.text[:200]}")
-                        return "Having trouble fetching advice now. Try again shortly."
+                        continue
 
                     data = resp.json()
-                    reply_raw = (
-                        data.get("choices", [{}])[0]
-                        .get("message", {})
-                        .get("content", "")
-                    )
-                    if not reply_raw:
-                        return "Sorry, I couldn't form a proper answer."
-
-                    reply = self._crisp(reply_raw)
-
-                    self.chat_history.append({
-                        "user": message,
-                        "assistant": reply,
-                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    })
-                    return reply
-
+                    reply = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    if reply:
+                        print(f"OpenRouter OK: {model_id} (key ...{api_key[-6:]})")
+                        return reply
                 except httpx.TimeoutException:
-                    print(f"OpenRouter timeout on {model_id}, trying next...")
+                    print(f"OpenRouter timeout on {model_id}")
                     continue
                 except Exception as e:
                     print(f"OpenRouter error on {model_id}: {e}")
                     continue
 
-            # All models exhausted for this attempt — backoff before retry
-            if attempt < 2:
-                wait_secs = 2 ** (attempt + 1)  # 2s, 4s
-                print(f"All models rate-limited. Waiting {wait_secs}s before retry {attempt + 2}/3...")
-                time.sleep(wait_secs)
+            print(f"All models exhausted for OpenRouter key ...{api_key[-6:]}")
+
+        return None
+
+    def send_message(self, message: str, system_prompt: Optional[str] = None) -> str:
+        """Send message with multi-provider failover and retry."""
+        messages = self._build_messages(message, system_prompt)
+
+        # Retry the entire provider chain up to 2 times with backoff
+        for attempt in range(2):
+            # Provider 1: HF Inference API
+            reply = self._try_hf_inference(messages)
+            if reply:
+                clean = self._crisp(reply)
+                self.chat_history.append({
+                    "user": message, "assistant": clean,
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                })
+                return clean
+
+            # Provider 2: OpenRouter (multi-key round-robin)
+            reply = self._try_openrouter(messages)
+            if reply:
+                clean = self._crisp(reply)
+                self.chat_history.append({
+                    "user": message, "assistant": clean,
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                })
+                return clean
+
+            # All providers exhausted — backoff before retry
+            if attempt < 1:
+                wait = 3
+                print(f"All providers exhausted. Waiting {wait}s before retry...")
+                time.sleep(wait)
 
         return "All AI models are busy right now. Please try again in a minute."
 
