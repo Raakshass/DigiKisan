@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "37604550846",
+    "project_id": "kisanmitra-ai-5af17",
+    "storage_bucket": "kisanmitra-ai-5af17.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:37604550846:android:7fa4427781774a47b4d6ef",
+        "android_client_info": {
+          "package_name": "com.digikisan.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJSo2Xqds8TvkDtOc7HAuDGG3E8IWdutM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
