@@ -60,6 +60,8 @@ class OpenRouterChat:
 
     def send_message(self, message: str, system_prompt: Optional[str] = None) -> str:
         """Send a message to OpenRouter with automatic model fallback on 429."""
+        import time
+
         concise_rule = (
             "Reply in plain text only (no markdown). Max 4 short sentences total. "
             "End with ONE brief follow-up question if helpful. Keep under 350 characters."
@@ -82,52 +84,65 @@ class OpenRouterChat:
         # Build model order: primary first, then fallbacks
         models_to_try = [self.model] + [m for m in self.FREE_MODELS if m != self.model]
 
-        for model_id in models_to_try:
-            payload = {
-                "model": model_id,
-                "messages": messages,
-                "temperature": 0.4,
-                "top_p": 0.9,
-                "max_tokens": 256,
-            }
-            try:
-                resp = httpx.post(
-                    self.BASE_URL,
-                    headers=headers,
-                    json=payload,
-                    timeout=25.0,
-                )
-                if resp.status_code in (429, 404):
-                    print(f"OpenRouter {resp.status_code} on {model_id}, trying next...")
+        # Retry the entire chain up to 3 times with exponential backoff
+        for attempt in range(3):
+            for model_id in models_to_try:
+                payload = {
+                    "model": model_id,
+                    "messages": messages,
+                    "temperature": 0.4,
+                    "top_p": 0.9,
+                    "max_tokens": 256,
+                }
+                try:
+                    resp = httpx.post(
+                        self.BASE_URL,
+                        headers=headers,
+                        json=payload,
+                        timeout=25.0,
+                    )
+                    if resp.status_code == 429:
+                        # Rate limited — try next model
+                        print(f"OpenRouter 429 on {model_id}, trying next...")
+                        continue
+                    if resp.status_code == 404:
+                        # Model not found — skip permanently
+                        print(f"OpenRouter 404 on {model_id}, skipping...")
+                        continue
+                    if resp.status_code != 200:
+                        print(f"OpenRouter HTTP {resp.status_code}: {resp.text[:200]}")
+                        return "Having trouble fetching advice now. Try again shortly."
+
+                    data = resp.json()
+                    reply_raw = (
+                        data.get("choices", [{}])[0]
+                        .get("message", {})
+                        .get("content", "")
+                    )
+                    if not reply_raw:
+                        return "Sorry, I couldn't form a proper answer."
+
+                    reply = self._crisp(reply_raw)
+
+                    self.chat_history.append({
+                        "user": message,
+                        "assistant": reply,
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    })
+                    return reply
+
+                except httpx.TimeoutException:
+                    print(f"OpenRouter timeout on {model_id}, trying next...")
                     continue
-                if resp.status_code != 200:
-                    print(f"OpenRouter HTTP {resp.status_code}: {resp.text[:200]}")
-                    return "Having trouble fetching advice now. Try again shortly."
+                except Exception as e:
+                    print(f"OpenRouter error on {model_id}: {e}")
+                    continue
 
-                data = resp.json()
-                reply_raw = (
-                    data.get("choices", [{}])[0]
-                    .get("message", {})
-                    .get("content", "")
-                )
-                if not reply_raw:
-                    return "Sorry, I couldn't form a proper answer."
-
-                reply = self._crisp(reply_raw)
-
-                self.chat_history.append({
-                    "user": message,
-                    "assistant": reply,
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                })
-                return reply
-
-            except httpx.TimeoutException:
-                print(f"OpenRouter timeout on {model_id}, trying next...")
-                continue
-            except Exception as e:
-                print(f"OpenRouter error on {model_id}: {e}")
-                continue
+            # All models exhausted for this attempt — backoff before retry
+            if attempt < 2:
+                wait_secs = 2 ** (attempt + 1)  # 2s, 4s
+                print(f"All models rate-limited. Waiting {wait_secs}s before retry {attempt + 2}/3...")
+                time.sleep(wait_secs)
 
         return "All AI models are busy right now. Please try again in a minute."
 
