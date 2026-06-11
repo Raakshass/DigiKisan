@@ -240,6 +240,19 @@ class TestGeminiChat:
         }
         assert gc._extract_text(data) == "Hello farmer!"
 
+    def test_extract_text_openrouter_payload(self):
+        from app.api.deps import GeminiChat
+        gc = GeminiChat(api_key="test-key")
+
+        data = {
+            "choices": [{
+                "message": {
+                    "content": "Hello from OpenRouter!"
+                }
+            }]
+        }
+        assert gc._extract_text(data) == "Hello from OpenRouter!"
+
     def test_extract_text_empty(self):
         from app.api.deps import GeminiChat
         gc = GeminiChat(api_key="test-key")
