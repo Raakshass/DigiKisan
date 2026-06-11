@@ -62,6 +62,7 @@ class OpenRouterChat:
         self.openrouter_keys = [k for k in [
             self.api_key,
             os.environ.get("OPENROUTER_API_KEY_2", ""),
+            os.environ.get("OPENROUTER_API_KEY_3", ""),
         ] if k]
 
     def _strip_markdown(self, s: str) -> str:
