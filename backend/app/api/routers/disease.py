@@ -32,13 +32,16 @@ async def disease_predict(
     file_location = os.path.join(temp_dir, file.filename)
 
     try:
+        contents = await file.read()
+        file_location = os.path.join(temp_dir, file.filename)
+
         with open(file_location, "wb") as f:
-            f.write(await file.read())
+            f.write(contents)
 
         if img_clf.available:
             disease_prediction = img_clf.predict(file_location)
         else:
-            # Fallback: use Gemini vision if classifier unavailable
+            # Fallback: use LLM general advice if classifier unavailable
             disease_prediction = "Unknown (classifier unavailable — run git lfs pull)"
 
         disease_summary = gemini_chat.get_disease_summary(disease_prediction)
@@ -51,6 +54,8 @@ async def disease_predict(
             "message": "Analyzed your crop image and started a brief consultation.",
             "classifier_available": img_clf.available,
         }
+    except Exception as e:
+        return {"ok": False, "error": "Internal server error", "detail": str(e)}
     finally:
         try:
             os.remove(file_location)
