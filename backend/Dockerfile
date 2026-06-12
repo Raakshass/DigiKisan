@@ -30,6 +30,9 @@ WORKDIR /app
 # Install minimal runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
+    git \
+    git-lfs \
+    && git lfs install \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder

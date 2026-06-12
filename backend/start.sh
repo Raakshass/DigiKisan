@@ -25,5 +25,27 @@ fi
 
 # --- Start Uvicorn ---
 PORT="${PORT:-7860}"
+
+# --- Model Checkpoint Verification ---
+MODEL_PATH="/app/models/image_classifier/best_model.pth"
+if [ -f "$MODEL_PATH" ]; then
+    MODEL_SIZE=$(stat -f%z "$MODEL_PATH" 2>/dev/null || stat -c%s "$MODEL_PATH" 2>/dev/null || echo "0")
+    echo "[start.sh] Model checkpoint size: $MODEL_SIZE bytes"
+    if [ "$MODEL_SIZE" -lt 10000 ]; then
+        echo "[start.sh] WARNING: Model appears to be an LFS pointer ($MODEL_SIZE bytes). Attempting git lfs pull..."
+        if command -v git &> /dev/null; then
+            cd /app && git lfs install --skip-repo 2>/dev/null && git lfs pull 2>/dev/null
+            NEW_SIZE=$(stat -f%z "$MODEL_PATH" 2>/dev/null || stat -c%s "$MODEL_PATH" 2>/dev/null || echo "0")
+            echo "[start.sh] After git lfs pull: $NEW_SIZE bytes"
+        else
+            echo "[start.sh] git not available. Disease classifier will use fallback mode."
+        fi
+    else
+        echo "[start.sh] Model checkpoint OK ($(($MODEL_SIZE / 1048576)) MB)"
+    fi
+else
+    echo "[start.sh] WARNING: Model checkpoint not found at $MODEL_PATH"
+fi
+
 echo "[start.sh] Starting uvicorn on port $PORT"
 exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT" --workers 1
