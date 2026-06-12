@@ -8,6 +8,7 @@ Handles crop disease detection and follow-up conversation:
 - /disease/chat/clear    — clear conversation history
 """
 import os
+import traceback
 from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, Body, UploadFile, File
@@ -29,11 +30,12 @@ async def disease_predict(
 
     temp_dir = "tmp"
     os.makedirs(temp_dir, exist_ok=True)
-    file_location = os.path.join(temp_dir, file.filename)
+    # Sanitize filename to avoid path traversal
+    safe_name = os.path.basename(file.filename or "upload.png")
+    file_location = os.path.join(temp_dir, safe_name)
 
     try:
         contents = await file.read()
-        file_location = os.path.join(temp_dir, file.filename)
 
         with open(file_location, "wb") as f:
             f.write(contents)
@@ -42,7 +44,7 @@ async def disease_predict(
             disease_prediction = img_clf.predict(file_location)
         else:
             # Fallback: use LLM general advice if classifier unavailable
-            disease_prediction = "Unknown (classifier unavailable — run git lfs pull)"
+            disease_prediction = "Unknown (classifier unavailable - run git lfs pull)"
 
         disease_summary = gemini_chat.get_disease_summary(disease_prediction)
 
@@ -55,7 +57,9 @@ async def disease_predict(
             "classifier_available": img_clf.available,
         }
     except Exception as e:
-        return {"ok": False, "error": "Internal server error", "detail": str(e)}
+        tb = traceback.format_exc()
+        print(f"Disease predict error: {tb}")
+        return {"ok": False, "error": "Internal server error", "detail": str(e), "traceback": tb}
     finally:
         try:
             os.remove(file_location)

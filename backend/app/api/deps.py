@@ -72,8 +72,31 @@ class OpenRouterChat:
         s = re.sub(r" {2,}", " ", s)
         return s.strip()
 
+    def _strip_thinking(self, s: str) -> str:
+        """Remove chain-of-thought reasoning leaked by thinking models."""
+        # Pattern: lines starting with reasoning prefixes
+        thinking_patterns = [
+            r"^(?:We need to|Let me|I need to|Let's|I should|I will|The user|The farmer|Thinking|Step \d|First,? I).*$",
+            r"^(?:Provide |Use reference|Reply in plain|Max \d|End with|Keep under).*$",
+            r"^(?:We can give|Here is|Here's|Okay,|So,?).*$",
+        ]
+        lines = s.split("\n")
+        cleaned = []
+        for line in lines:
+            is_thinking = False
+            for pattern in thinking_patterns:
+                if re.match(pattern, line.strip(), re.IGNORECASE):
+                    is_thinking = True
+                    break
+            if not is_thinking and line.strip():
+                cleaned.append(line)
+        result = "\n".join(cleaned).strip()
+        # If everything was stripped, return original (better than empty)
+        return result if result else s
+
     def _crisp(self, s: str, max_chars: int = 350) -> str:
         s = self._strip_markdown(s)
+        s = self._strip_thinking(s)
         if len(s) <= max_chars:
             return s
         cut = s[:max_chars]
@@ -83,7 +106,9 @@ class OpenRouterChat:
     def _build_messages(self, message: str, system_prompt: Optional[str] = None) -> list:
         concise_rule = (
             "Reply in plain text only (no markdown). Max 4 short sentences total. "
-            "End with ONE brief follow-up question if helpful. Keep under 350 characters."
+            "End with ONE brief follow-up question if helpful. Keep under 350 characters. "
+            "Do NOT include internal reasoning, thinking steps, or planning. "
+            "Output ONLY the final answer for the farmer."
         )
         messages = []
         if system_prompt:
