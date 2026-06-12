@@ -145,10 +145,12 @@ async def log_requests(request: Request, call_next):
     print(f"🕐 Time: {time.strftime('%H:%M:%S')}")
 
     try:
-        if req_body:
-            print(f"📤 BODY: {json.loads(req_body.decode())}")
-    except json.JSONDecodeError:
-        print(f"📤 BODY (raw): {req_body[:200]}")
+        if req_body and "multipart" not in (request.headers.get("content-type", "")):
+            print(f"BODY: {json.loads(req_body.decode())}")
+        elif req_body:
+            print(f"BODY: [multipart file upload, {len(req_body)} bytes]")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        print(f"BODY (raw): {len(req_body)} bytes")
 
     response = await call_next(request)
 
@@ -175,13 +177,16 @@ async def log_requests(request: Request, call_next):
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch unhandled exceptions and return a clean JSON error."""
-    print(f"❌ Unhandled exception on {request.url}: {exc}")
+    import traceback
+    tb = traceback.format_exc()
+    print(f"Unhandled exception on {request.url}: {exc}\n{tb}")
     return JSONResponse(
         status_code=500,
         content={
             "ok": False,
             "error": "Internal server error",
-            "detail": str(exc) if settings.debug else "An unexpected error occurred",
+            "detail": str(exc),
+            "traceback": tb,
         },
     )
 
